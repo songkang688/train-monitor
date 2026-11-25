@@ -977,10 +977,11 @@ def snapshot() -> dict:
             state = "failed"
         elif total and ep_done >= total:
             state = "done"
-        elif updated and now - updated < 180 and log_path:
+        elif updated and now - updated <= 45 and log_path:
             state = "running"
         else:
             state = "stopped" if (total and ep_done < total) else "done"
+        is_active = state in {"running", "starting"}
 
         cat = infer_category(path_str or raw_name, met.get("columns") or [])
         nkey = path_str or log_path or raw_name
@@ -1004,15 +1005,15 @@ def snapshot() -> dict:
             "pid": pid,
             "log": log_path or (str(_find_best_log(folder)) if _find_best_log(folder) else ""),
             "epoch_done": ep_done,
-            "epoch_now": ep_now,
+            "epoch_now": ep_now if is_active else ep_done,
             "total": total,
-            "phase": prog.get("phase") or "",
-            "batch": prog.get("batch"),
-            "batches": prog.get("batches"),
-            "batch_pct": prog.get("batch_pct"),
-            "speed": prog.get("speed") or "",
-            "remain": prog.get("remain") or "",
-            "gpu_mem": prog.get("gpu_mem") or "",
+            "phase": (prog.get("phase") or "") if is_active else "",
+            "batch": prog.get("batch") if is_active else None,
+            "batches": prog.get("batches") if is_active else None,
+            "batch_pct": prog.get("batch_pct") if is_active else None,
+            "speed": (prog.get("speed") or "") if is_active else "",
+            "remain": (prog.get("remain") or "") if is_active else "",
+            "gpu_mem": (prog.get("gpu_mem") or "") if is_active else "",
             "alert": prog.get("alert") or "",
             "latest": met.get("latest") or {},
             "latest_epoch": met.get("latest_epoch") or {},
