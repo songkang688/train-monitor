@@ -529,7 +529,7 @@ def live_processes(cfg: dict, gpu_pids: set[int]) -> list[dict]:
         if _pid_user(pid_s) != my_user:
             continue
         low = cmd.lower()
-        if any(skip in low for skip in ("pgrep", "server.py", "train_board", "train-monitor", "通用版", "ipykernel", "jupyter", "language_server")):
+        if any(skip in low for skip in ("pgrep", "server.py", "train_board", "通用版", "ipykernel", "jupyter", "language_server")):
             continue
         pid_i = int(pid_s)
         if pid_i in gpu_pids or any(n in low for n in needles):
@@ -674,11 +674,19 @@ def metrics_of(folder: Path | None, log_path: str = "") -> dict:
             parsed["test_metrics"] = log_parsed["test_metrics"]
 
     if not parsed:
-        payload = {"rows": [], "columns": [], "latest": {}, "best": {}, "test_metrics": {}, "epoch_done": 0, "total": None, "source_kind": "", "auto_summary": []}
+        payload = {"rows": [], "columns": [], "latest": {}, "latest_epoch": {}, "best": {}, "test_metrics": {}, "epoch_done": 0, "total": None, "source_kind": "", "auto_summary": []}
     else:
         cols = parsed.get("columns") or []
         latest = parsed.get("latest") or {}
         best = parsed.get("best") or {}
+        latest_epoch: dict[str, int] = {}
+        for row_pt in parsed.get("rows") or []:
+            ep_i = row_pt.get("epoch")
+            if ep_i is None:
+                continue
+            for k in latest:
+                if row_pt.get(k) is not None:
+                    latest_epoch[k] = int(ep_i)
         auto_summary = []
         for col in cols[:4]:
             k = col["key"]
@@ -689,12 +697,13 @@ def metrics_of(folder: Path | None, log_path: str = "") -> dict:
                 "key": k,
                 "label": col["label"] if col["group"] in {"自动指标", "验证指标"} else f"{col['group']} {col['label']}",
                 "latest": latest[k],
+                "latest_ep": latest_epoch.get(k),
                 "best": b.get("value"),
                 "best_ep": b.get("epoch"),
                 "higher": col.get("higher", True),
                 "is_pct": col.get("is_pct", False),
             })
-        payload = {**parsed, "source_kind": source_kind, "auto_summary": auto_summary}
+        payload = {**parsed, "latest_epoch": latest_epoch, "source_kind": source_kind, "auto_summary": auto_summary}
     _summary_cache[ckey] = (sig, payload)
     return payload
 
@@ -1006,6 +1015,7 @@ def snapshot() -> dict:
             "gpu_mem": prog.get("gpu_mem") or "",
             "alert": prog.get("alert") or "",
             "latest": met.get("latest") or {},
+            "latest_epoch": met.get("latest_epoch") or {},
             "best": met.get("best") or {},
             "auto_summary": met.get("auto_summary") or [],
             "note": notes.get(nkey, ""),
@@ -1074,7 +1084,14 @@ def snapshot() -> dict:
         card["other_users"] = other_users
         card["free"] = (len(job_details) == 0 and len(other_users) == 0 and card["util"] < 10 and card["memory_used"] < 1500)
 
-    runs.sort(key=lambda r: (0 if r.get("pid") else 1 if r.get("state") in {"running", "starting"} else 2, -float(r.get("updated") or 0)))
+    def _run_sort_key(r: dict) -> tuple:
+        live_rank = 0 if r.get("pid") else 1 if r.get("state") in {"running", "starting"} else 2
+        if live_rank < 2:
+            dev_nums = [int(p) for p in str(r.get("device") or "").split(",") if p.strip().isdigit()]
+            return (live_rank, min(dev_nums) if dev_nums else 99, str(r.get("key") or ""))
+        return (live_rank, -float(r.get("updated") or 0), str(r.get("key") or ""))
+
+    runs.sort(key=_run_sort_key)
     # 记录当前快照中可见的运行目录与日志，确保 /data、/autodl-tmp 等非 $HOME 目录也能正常查看曲线与日志
     allowed_now: set[str] = set()
     for r in runs:

@@ -30,6 +30,13 @@
     --test-ink: #7d4813;
     --bad: #9e2a2b;
     --bad-soft: #fae8e8;
+    --hi-red: #d32f2f;
+    --hi-red-soft: #fdecec;
+    --c-cur: #1d5696;
+    --c-cur-ep: #5679a1;
+    --c-best: #0a7a5c;
+    --c-best-ep: #3c8270;
+    --c-best-bg: rgba(10, 122, 92, 0.08);
     --warn: #8a5610;
     --warn-soft: #fbf0dc;
     --blue: #1d5b86;
@@ -571,6 +578,84 @@
     font-family: "JetBrains Mono", ui-monospace, monospace;
   }
 
+  /* Status strip (Baseline + Legend) & Top Scrollbar */
+  .status-strip {
+    padding: 7px 16px;
+    background: #f6fafb;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 14px;
+    flex-wrap: wrap;
+    font-size: 12px;
+  }
+  .base-banner {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .base-banner.active {
+    background: #fef6e4;
+    border-color: #e0a83b;
+    color: #8a4b08;
+  }
+  .base-banner button {
+    border: 0;
+    background: rgba(138, 75, 8, 0.14);
+    color: #8a4b08;
+    border-radius: 999px;
+    padding: 1px 7px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .base-banner button:hover { background: rgba(138, 75, 8, 0.24); }
+  .color-legend {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--ink-soft);
+  }
+  .color-legend.hidden { display: none; }
+  .cl-item { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .cl-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .cl-dot.cur { background: var(--c-cur); }
+  .cl-dot.best { background: var(--c-best); }
+
+  .top-scroll-wrap {
+    overflow-x: auto;
+    overflow-y: hidden;
+    background: #eaf1f5;
+    border-bottom: 1px solid var(--line);
+    padding: 3px 0;
+    scrollbar-width: auto;
+    scrollbar-color: #6d8998 #e2ecf1;
+  }
+  .top-scroll-wrap[hidden] { display: none; }
+  .top-scroll-wrap::-webkit-scrollbar { height: 11px; }
+  .top-scroll-wrap::-webkit-scrollbar-track { background: #e2ecf1; border-radius: 999px; }
+  .top-scroll-wrap::-webkit-scrollbar-thumb {
+    background: #7b98a8;
+    border-radius: 999px;
+    border: 2px solid #e2ecf1;
+  }
+  .top-scroll-wrap::-webkit-scrollbar-thumb:hover { background: var(--teal); }
+  .top-scroll-inner { height: 1px; }
+
   /* Main Table */
   .table-wrap {
     overflow-x: auto;
@@ -601,12 +686,16 @@
   table.board thead th.sortable:hover { color: var(--teal); }
   table.board thead th.test-col { background: var(--test-head); color: var(--test-ink); }
   table.board tbody tr.run-row td {
-    padding: 10px 10px;
+    padding: 9px 10px;
     border-bottom: 1px solid var(--line);
-    vertical-align: middle;
+    vertical-align: top;
     background: var(--paper);
   }
   table.board tbody tr.run-row:hover td { background: #f6fafb; }
+  table.board tbody tr.run-row.is-baseline td:nth-child(2) {
+    border-left: 3px solid #d97706;
+    background: #fffcf3;
+  }
   table.board tbody tr.run-row.has-sub td { border-bottom: none; padding-bottom: 7px; }
   table.board tbody tr.test-subrow td {
     padding: 5px 12px 9px 44px;
@@ -767,12 +856,20 @@
     color: var(--ink-soft);
   }
 
-  .prog-cell { min-width: 126px; font-variant-numeric: tabular-nums; }
-  .prog-main {
-    font-family: "JetBrains Mono", ui-monospace, monospace;
-    font-size: 12.5px;
+  .note-pill.base-on {
+    background: #fef3c7;
+    border-color: #e0a83b;
+    color: #8a4b08;
     font-weight: 700;
   }
+  .hi-red { color: var(--hi-red) !important; font-weight: 800; }
+  .prog-cell { min-width: 132px; font-variant-numeric: tabular-nums; }
+  .prog-main {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .prog-main .hi-red { font-size: 14.5px; }
   .prog-sub { font-size: 11.5px; color: var(--muted); }
   .prog-bar {
     height: 5px;
@@ -782,6 +879,23 @@
     overflow: hidden;
   }
   .prog-bar span { display: block; height: 100%; background: var(--teal); border-radius: 999px; }
+  .stag-tag {
+    display: inline-block;
+    margin-top: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--muted);
+  }
+  .stag-tag.fresh { color: var(--c-best); font-weight: 700; }
+  .stag-tag.warn { color: #b45309; font-weight: 700; }
+  .stag-tag.hot {
+    color: var(--hi-red);
+    background: var(--hi-red-soft);
+    padding: 0 5px;
+    border-radius: 4px;
+    font-weight: 800;
+  }
 
   .num-cell {
     text-align: right;
@@ -789,8 +903,53 @@
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
+  .num-cell.mcell { padding: 7px 8px; min-width: 78px; }
+  .m-stack { display: flex; flex-direction: column; align-items: stretch; }
+  .m-blk {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    padding: 2px 5px;
+    border-radius: 6px;
+  }
+  .m-blk-cur { margin-bottom: 3px; }
+  .m-blk-best.win-bg { background: var(--c-best-bg); }
+  .m-ep {
+    height: 14px;
+    line-height: 14px;
+    font-size: 10.5px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .m-ep.ep-cur { color: var(--c-cur-ep); }
+  .m-ep.ep-best { color: var(--c-best-ep); }
+  .m-val {
+    height: 18px;
+    line-height: 18px;
+    font-size: 13.5px;
+    font-weight: 700;
+  }
+  .m-val.val-cur { color: var(--c-cur); }
+  .m-val.val-best { color: var(--c-best); }
+  .m-val.is-empty { color: #b4c3cc; font-weight: 500; }
+  .m-delta-row {
+    height: 14px;
+    line-height: 14px;
+    font-size: 10.5px;
+    white-space: nowrap;
+  }
+  .delta { font-size: 10.5px; font-weight: 700; }
+  .delta.up { color: var(--c-best); }
+  .delta.down { color: var(--copper); }
+  .delta.base-self {
+    color: #9a5d00;
+    background: #fef3c7;
+    padding: 0 5px;
+    border-radius: 4px;
+    font-size: 10px;
+  }
   .num-main { font-weight: 700; font-size: 13.5px; color: var(--ink); }
-  .num-main.best-hi { color: var(--teal); }
+  .num-main.best-hi { color: var(--c-best); }
   .num-sub { display: block; font-size: 11px; color: var(--muted); font-weight: 500; }
 
   .auto-pills {
@@ -1148,6 +1307,7 @@
 
       <div class="toolbar-row">
         <div class="cluster-group">
+          <button class="btn sm active" id="lock-order-btn" type="button" title="行顺序已锁定，3 秒刷新绝不上下乱跳；点击可按当前规则重排或切换">🔒 顺序锁定</button>
           <button class="btn sm" id="only-tested-btn" type="button">仅看有 Test</button>
           <button class="btn sm" id="hide-short-btn" type="button">隐藏短试跑 (&lt;5轮)</button>
           <button class="btn sm" id="only-pinned-btn" type="button">仅看已置顶 ★</button>
@@ -1157,6 +1317,14 @@
           <button class="btn sm" id="export-md-btn" type="button">复制 Markdown 表</button>
           <button class="btn sm" id="notify-btn" type="button">跑完提醒我</button>
         </div>
+      </div>
+    </div>
+
+    <div class="status-strip" id="status-strip">
+      <div class="base-banner" id="base-banner">🎯 基准：未设置（点任意实验「设为基准」即可全列算 Δ）</div>
+      <div class="color-legend" id="color-legend" aria-label="指标色标图例">
+        <span class="cl-item"><i class="cl-dot cur"></i><span style="color:var(--c-cur)">本轮</span></span>
+        <span class="cl-item"><i class="cl-dot best"></i><span style="color:var(--c-best)">最优 Best</span></span>
       </div>
     </div>
 
@@ -1184,7 +1352,7 @@
           <div class="cluster" role="group" aria-label="纵轴模式">
             <span class="cluster-lbl">纵轴</span>
             <button class="seg-btn active" data-ymode="focus" type="button">聚焦高段</button>
-            <button class="seg-btn" data-ymode="delta" type="button">相对均值 Δ</button>
+            <button class="seg-btn" data-ymode="delta" type="button">相对基准/均值 Δ</button>
             <button class="seg-btn" data-ymode="full" type="button">全景</button>
           </div>
           <div class="cluster" role="group" aria-label="起始区间">
@@ -1213,7 +1381,10 @@
     </div>
 
     <!-- Experiments Table -->
-    <div class="table-wrap">
+    <div class="top-scroll-wrap" id="top-scroll" hidden aria-label="表格顶部横向拖杆">
+      <div class="top-scroll-inner" id="top-scroll-inner"></div>
+    </div>
+    <div class="table-wrap" id="table-wrap">
       <table class="board" id="jobs-table">
         <thead id="jobs-head"></thead>
         <tbody id="jobs-body"></tbody>
@@ -1363,6 +1534,7 @@
   const STORE = {
     pins: "utb_pins_v1",
     gpuCollapsed: "utb_gpu_collapsed_v1",
+    baseline: "utb_baseline_key_v1",
   };
 
   const state = {
@@ -1371,6 +1543,10 @@
     scope: "all",
     cat: "all",
     mode: "key", // key | detail | test
+    orderLocked: true,
+    lockedOrder: new Map(),
+    syncingScroll: false,
+    baselineKey: loadJson(STORE.baseline, ""),
     onlyTested: false,
     hideShort: false,
     onlyPinned: false,
@@ -1495,26 +1671,152 @@
     });
   }
 
+  function firstGpuNum(r) {
+    const parts = String(r.device || "").split(",").map((s) => s.trim()).filter((s) => /^\d+$/.test(s));
+    return parts.length ? Math.min(...parts.map(Number)) : 99;
+  }
+  function resetLockedOrder() {
+    state.lockedOrder.clear();
+  }
+  function compareRunsBase(a, b) {
+    const pa = state.pins.has(a.key) ? 0 : 1;
+    const pb = state.pins.has(b.key) ? 0 : 1;
+    if (pa !== pb) return pa - pb;
+    if (state.sortKey) {
+      const va = extractSortVal(a, state.sortKey);
+      const vb = extractSortVal(b, state.sortKey);
+      if (va === null && vb === null) return String(a.key).localeCompare(String(b.key));
+      if (va === null) return 1;
+      if (vb === null) return -1;
+      if (va !== vb) return (va < vb ? -1 : 1) * state.sortDir;
+      return String(a.key).localeCompare(String(b.key));
+    }
+    const ra = a.pid ? 0 : (a.state === "running" || a.state === "starting" ? 1 : 2);
+    const rb = b.pid ? 0 : (b.state === "running" || b.state === "starting" ? 1 : 2);
+    if (ra !== rb) return ra - rb;
+    if (ra < 2) {
+      const ga = firstGpuNum(a);
+      const gb = firstGpuNum(b);
+      if (ga !== gb) return ga - gb;
+      return String(a.key).localeCompare(String(b.key));
+    }
+    const du = (b.updated || 0) - (a.updated || 0);
+    return du !== 0 ? du : String(a.key).localeCompare(String(b.key));
+  }
   function sortRuns(list) {
-    const out = list.slice();
-    out.sort((a, b) => {
+    const base = list.slice().sort(compareRunsBase);
+    if (!state.orderLocked) return base;
+    if (state.lockedOrder.size === 0) {
+      base.forEach((r, idx) => state.lockedOrder.set(r.key, idx));
+      return base;
+    }
+    let nextIdx = state.lockedOrder.size;
+    for (const r of base) {
+      if (!state.lockedOrder.has(r.key)) state.lockedOrder.set(r.key, nextIdx++);
+    }
+    return base.sort((a, b) => {
       const pa = state.pins.has(a.key) ? 0 : 1;
       const pb = state.pins.has(b.key) ? 0 : 1;
       if (pa !== pb) return pa - pb;
-      if (state.sortKey) {
-        const va = extractSortVal(a, state.sortKey);
-        const vb = extractSortVal(b, state.sortKey);
-        if (va === null && vb === null) return 0;
-        if (va === null) return 1;
-        if (vb === null) return -1;
-        if (va !== vb) return (va < vb ? -1 : 1) * state.sortDir;
-      }
-      const ra = a.pid ? 0 : (a.state === "running" ? 1 : 2);
-      const rb = b.pid ? 0 : (b.state === "running" ? 1 : 2);
-      if (ra !== rb) return ra - rb;
-      return (b.updated || 0) - (a.updated || 0);
+      return (state.lockedOrder.get(a.key) ?? 999999) - (state.lockedOrder.get(b.key) ?? 999999);
     });
-    return out;
+  }
+
+  function getBaselineRow() {
+    if (!state.baselineKey) return null;
+    return runByKey(state.baselineKey);
+  }
+  function setBaselineKey(k) {
+    const next = k && k === state.baselineKey ? "" : (k || "");
+    state.baselineKey = next;
+    saveJson(STORE.baseline, next);
+    const brow = getBaselineRow();
+    toast(brow ? `已设「${brow.title}」为全局对比基准（全列动态算 Δ）` : "已取消全局对比基准");
+    paintTable();
+    if (state.selected.size >= 2) refreshCompare();
+  }
+  function paintBaselineBanner() {
+    const el = $("base-banner");
+    if (!el) return;
+    const brow = getBaselineRow();
+    if (brow) {
+      el.classList.add("active");
+      el.innerHTML = `🎯 基准：<strong>${esc(brow.title)}</strong> <button type="button" id="clear-base-btn" title="取消当前基准">取消</button>`;
+      $("clear-base-btn").onclick = () => setBaselineKey("");
+    } else {
+      el.classList.remove("active");
+      el.textContent = "🎯 基准：未设置（点任意实验「设为基准」即可全列算 Δ）";
+    }
+  }
+  function deltaBadgeHtml(row, val, colKey, isPct, higher = true) {
+    const brow = getBaselineRow();
+    if (!brow || val === null || val === undefined || Number.isNaN(Number(val))) return "";
+    if (row.key === brow.key) return `<span class="delta base-self">基准</span>`;
+    const bVal = brow.best?.[colKey]?.value ?? brow.latest?.[colKey];
+    if (typeof bVal !== "number" || Number.isNaN(bVal)) return "";
+    const curN = Number(val);
+    const sCur = (isPct && curN >= 0 && curN <= 1.0001) ? curN * 100 : curN;
+    const sBase = (isPct && bVal >= 0 && bVal <= 1.0001) ? bVal * 100 : bVal;
+    const gap = sCur - sBase;
+    const eps = isPct ? 0.05 : 0.0005;
+    const cls = (higher ? gap > eps : gap < -eps) ? "up" : (higher ? gap < -eps : gap > eps) ? "down" : "";
+    const txt = (gap > 0 ? "+" : "") + (isPct ? gap.toFixed(2) + "%" : (Math.abs(gap) >= 10 ? gap.toFixed(2) : gap.toFixed(3)));
+    return `<span class="delta ${cls}">${txt}</span>`;
+  }
+  function testDeltaHtml(row, setName, scoreObj) {
+    const brow = getBaselineRow();
+    if (!brow || !scoreObj) return "";
+    if (row.key === brow.key) return `<span class="delta base-self">基准</span>`;
+    const bSet = (brow.tests?.sets || {})[setName];
+    if (!bSet) return "";
+    const bVal = bSet[scoreObj.key] ?? primaryTestScore(bSet)?.val;
+    if (typeof bVal !== "number" || Number.isNaN(bVal)) return "";
+    const pct = isPctMetricName(scoreObj.key);
+    const higher = !/(loss|mse|mae|rmse|sad|ppl|err|wer|cer)/i.test(scoreObj.key);
+    const sCur = (pct && scoreObj.val >= 0 && scoreObj.val <= 1.0001) ? scoreObj.val * 100 : scoreObj.val;
+    const sBase = (pct && bVal >= 0 && bVal <= 1.0001) ? bVal * 100 : bVal;
+    const gap = sCur - sBase;
+    const eps = pct ? 0.05 : 0.0005;
+    const cls = (higher ? gap > eps : gap < -eps) ? "up" : (higher ? gap < -eps : gap > eps) ? "down" : "";
+    const txt = (gap > 0 ? "+" : "") + (pct ? gap.toFixed(2) + "%" : (Math.abs(gap) >= 10 ? gap.toFixed(2) : gap.toFixed(3)));
+    return `<span class="delta ${cls}">${txt}</span>`;
+  }
+  function stagnantBadgeHtml(r) {
+    const done = Number(r.epoch_done || 0);
+    if (done <= 0) return "";
+    let bestEp = null;
+    let label = "";
+    const autos = r.auto_summary || [];
+    const pick = autos.find((it) => it.higher !== false && it.best_ep != null) || autos.find((it) => it.best_ep != null);
+    if (pick) {
+      bestEp = Number(pick.best_ep);
+      label = pick.label || "主指标";
+    } else if (r.best) {
+      const entries = Object.entries(r.best).filter(([, b]) => b && b.epoch != null);
+      if (entries.length) { bestEp = Number(entries[0][1].epoch); label = entries[0][0]; }
+    }
+    if (bestEp === null || Number.isNaN(bestEp)) return "";
+    const gap = Math.max(0, done - bestEp);
+    const tip = `距上次 ${label} 刷新最优（E${bestEp}）已过去 ${gap} 轮（当前已完成 E${done}）`;
+    if (gap === 0) return `<span class="stag-tag fresh" title="${esc(tip)}">刚创新高 (E${bestEp})</span>`;
+    const cls = gap >= 35 ? "hot" : gap >= 15 ? "warn" : "";
+    return `<span class="stag-tag ${cls}" title="${esc(tip)}">已 ${gap} 轮没涨</span>`;
+  }
+  function syncTopScroll() {
+    const topEl = $("top-scroll");
+    const innerEl = $("top-scroll-inner");
+    const wrapEl = $("table-wrap");
+    if (!topEl || !innerEl || !wrapEl) return;
+    const tbl = $("jobs-table");
+    const sw = tbl ? tbl.scrollWidth : wrapEl.scrollWidth;
+    const cw = wrapEl.clientWidth;
+    if (sw > cw + 4) {
+      topEl.hidden = false;
+      innerEl.style.width = sw + "px";
+      if (Math.abs(topEl.scrollLeft - wrapEl.scrollLeft) > 1) topEl.scrollLeft = wrapEl.scrollLeft;
+    } else {
+      topEl.hidden = true;
+    }
   }
 
   function extractSortVal(r, key) {
@@ -1670,11 +1972,13 @@
   }
 
   function paintTable() {
+    paintBaselineBanner();
     const runs = sortRuns(filteredRuns());
     const now = state.data?.now || Date.now() / 1000;
     const thead = $("jobs-head");
     const tbody = $("jobs-body");
     const notice = $("hetero-notice");
+    $("color-legend").classList.toggle("hidden", state.mode === "test");
 
     if (!runs.length) {
       notice.classList.add("hidden");
@@ -1683,6 +1987,7 @@
         <h3>当前筛选条件下暂无实验</h3>
         <p>如果你刚在新电脑上启动，请确认已有正在运行的 GPU/Python 训练进程，或在 <code>config.json</code> / <code>--root</code> 中添加实验输出目录。</p>
       </td></tr>`;
+      syncTopScroll();
       return;
     }
 
@@ -1700,12 +2005,14 @@
 
     if (state.mode === "test") {
       paintTestModeTable(runs, now, thead, tbody);
+      syncTopScroll();
       return;
     }
 
     const colsToShow = useAutoCards ? [] : (state.mode === "detail" ? present.slice(0, 12) : present.slice(0, 6));
+    const baseRow = getBaselineRow();
 
-    // 计算每列在当前可见行中的最优值，用于高亮第一名
+    // 计算每列在当前可见行中的最优值，用于淡淡绿底提示第一名
     const colWinners = new Map();
     for (const c of colsToShow) {
       let bestV = null;
@@ -1725,7 +2032,7 @@
       `<th class="sortable" data-sort="_epoch">进度${sortArrow("_epoch")}</th>`,
     ];
     if (useAutoCards) {
-      ths.push(`<th>核心指标（按实验自动提取 · 最新 / 最优）</th>`);
+      ths.push(`<th>核心指标（按实验自动提取 · 本轮 / 最优）</th>`);
     } else {
       for (const c of colsToShow) {
         ths.push(`<th class="num sortable" data-sort="${esc(c.key)}" title="${esc(c.group + " / " + c.label)}">${esc(c.label)}${sortArrow(c.key)}</th>`);
@@ -1742,6 +2049,7 @@
     for (const r of runs) {
       const checked = state.selected.has(r.key) ? "checked" : "";
       const pinned = state.pins.has(r.key);
+      const isBase = !!(baseRow && r.key === baseRow.key);
       const hasTest = !!(r.tests && r.tests.has_test);
       const srcBadge = r.source_kind === "console"
         ? `<span class="src-tag console" title="从控制台日志自动兜底提取">控制台自动</span>`
@@ -1750,37 +2058,53 @@
       const noteBtn = r.note
         ? `<button type="button" class="note-pill" data-note-key="${esc(r.key)}" title="${esc(r.note)}">📝 ${esc(r.note)}</button>`
         : `<button type="button" class="note-pill empty" data-note-key="${esc(r.key)}">+ 备注</button>`;
+      const baseBtn = `<button type="button" class="note-pill ${isBase ? "base-on" : "empty"}" data-base-key="${esc(r.key)}" title="${isBase ? "当前全局基准（点击取消）" : "将该实验设为全局对比基准，其他实验自动算 Δ"}">${isBase ? "🎯 当前基准" : "设为基准"}</button>`;
       const addTestBtn = !hasTest
         ? `<button type="button" class="note-pill empty" data-test-key="${esc(r.key)}">+ Test</button>`
         : "";
       const alertEl = r.alert ? `<span class="alert-tag" title="${esc(r.alert)}">⚠ ${esc(r.alert.slice(0, 48))}</span>` : "";
 
-      const progMain = r.total ? `${r.epoch_now || r.epoch_done}/${r.total}` : (r.epoch_done ? `第 ${r.epoch_done} 轮` : (r.batch_pct != null ? `${r.batch_pct}%` : "–"));
+      const epNowDisp = r.epoch_now || r.epoch_done || 0;
+      const progMainHtml = r.total
+        ? `<span class="hi-red">${epNowDisp}</span><span style="color:var(--muted)">/${r.total}</span>`
+        : (r.epoch_done ? `第 <span class="hi-red">${r.epoch_done}</span> 轮` : (r.batch_pct != null ? `<span class="hi-red">${r.batch_pct}%</span>` : "–"));
       const progBits = [];
       if (r.phase) progBits.push(r.phase);
       if (r.batch_pct != null && r.state === "running") progBits.push(`${r.batch_pct}%`);
       if (r.remain && r.state === "running") progBits.push(`剩 ${r.remain}`);
       else if (r.gpu_mem) progBits.push(r.gpu_mem);
       const pctBar = r.total ? Math.min(100, Math.round(((r.epoch_done || r.epoch_now || 0) / r.total) * 100)) : (r.batch_pct || 0);
+      const stagHtml = stagnantBadgeHtml(r);
 
       const metricCells = [];
       if (useAutoCards || !colsToShow.length) {
         metricCells.push(`<td>${renderAutoSummaryPills(r)}</td>`);
       } else {
+        const rowHasDelta = !!(baseRow && colsToShow.some((c) => (r.best?.[c.key] || r.latest?.[c.key] !== undefined) && (baseRow.best?.[c.key] || baseRow.latest?.[c.key] !== undefined)));
         let anyHit = false;
         for (const c of colsToShow) {
           const lv = r.latest?.[c.key];
           const bv = r.best?.[c.key];
           if (lv !== undefined || bv) anyHit = true;
+          const curEp = r.latest_epoch?.[c.key] ?? r.epoch_done;
           const winner = colWinners.get(c.key);
           const curBest = bv?.value ?? lv;
           const isWin = winner !== null && curBest !== undefined && Math.abs(curBest - winner) < 1e-9;
-          if (lv === undefined && !bv) {
-            metricCells.push(`<td class="num-cell" style="color:var(--muted);">–</td>`);
-          } else {
-            const sub = bv && bv.epoch ? `优 ${fmtVal(bv.value, c.is_pct)} @${bv.epoch}` : "";
-            metricCells.push(`<td class="num-cell"><span class="num-main ${isWin ? "best-hi" : ""}">${fmtVal(lv ?? bv.value, c.is_pct)}</span>${sub ? `<span class="num-sub">${sub}</span>` : ""}</td>`);
-          }
+          const dHtml = rowHasDelta ? deltaBadgeHtml(r, bv?.value ?? lv, c.key, c.is_pct, c.higher !== false) : "";
+          const deltaSlot = rowHasDelta ? `<span class="m-delta-row">${dHtml || "&nbsp;"}</span>` : "";
+          metricCells.push(`<td class="num-cell mcell">
+            <div class="m-stack">
+              <div class="m-blk m-blk-cur">
+                <span class="m-ep ep-cur">${lv !== undefined && curEp ? `当前 E${curEp}` : "&nbsp;"}</span>
+                <span class="m-val val-cur${lv === undefined ? " is-empty" : ""}">${lv !== undefined ? fmtVal(lv, c.is_pct) : "–"}</span>
+              </div>
+              <div class="m-blk m-blk-best${isWin ? " win-bg" : ""}">
+                <span class="m-ep ep-best">${bv && bv.epoch ? `最优 E${bv.epoch}` : "&nbsp;"}</span>
+                <span class="m-val val-best${!bv ? " is-empty" : ""}">${bv ? fmtVal(bv.value, c.is_pct) : "–"}</span>
+                ${deltaSlot}
+              </div>
+            </div>
+          </td>`);
         }
         if (!anyHit && (r.auto_summary || []).length) {
           metricCells.splice(0, metricCells.length, `<td colspan="${colsToShow.length}">${renderAutoSummaryPills(r)}</td>`);
@@ -1789,20 +2113,21 @@
 
       const devTag = r.device ? `<span class="dev-tag">卡 ${esc(r.device)}</span>` : "";
       htmlRows.push(`
-        <tr class="run-row ${hasTest ? "has-sub" : ""}">
+        <tr class="run-row ${hasTest ? "has-sub" : ""} ${isBase ? "is-baseline" : ""}">
           <td style="text-align:center;"><input type="checkbox" data-cmp-key="${esc(r.key)}" ${checked} aria-label="勾选对比 ${esc(r.title)}"></td>
           <td class="run-cell">
             <div class="run-head">
               <button type="button" class="pin-btn ${pinned ? "pinned" : ""}" data-pin-key="${esc(r.key)}" title="${pinned ? "取消置顶" : "置顶实验"}">${pinned ? "★" : "☆"}</button>
               <button type="button" class="run-link" data-open-key="${esc(r.key)}">${esc(r.title)}</button>
             </div>
-            <div class="run-meta">${catBadge}${srcBadge}${noteBtn}${addTestBtn}${alertEl}</div>
+            <div class="run-meta">${catBadge}${srcBadge}${noteBtn}${baseBtn}${addTestBtn}${alertEl}</div>
           </td>
           <td style="white-space:nowrap;"><span class="state-pill state-${esc(r.state)}">${esc(r.state_zh)}</span>${devTag}</td>
           <td class="prog-cell">
-            <div class="prog-main">${esc(progMain)}</div>
+            <div class="prog-main">${progMainHtml}</div>
             <div class="prog-sub">${esc(progBits.join(" · ") || "—")}</div>
             ${pctBar > 0 ? `<div class="prog-bar"><span style="width:${pctBar}%"></span></div>` : ""}
+            ${stagHtml}
           </td>
           ${metricCells.join("")}
           <td class="num-cell" style="color:var(--muted);font-size:12px;">${fmtAgo(r.updated, now)}</td>
@@ -1815,6 +2140,7 @@
       }
     }
     tbody.innerHTML = htmlRows.join("");
+    syncTopScroll();
   }
 
   function renderAutoSummaryPills(r) {
@@ -1823,8 +2149,9 @@
       return `<span style="color:var(--muted);font-size:12px;">${r.state === "running" ? "等待首个指标输出…" : "暂无白名单指标（点标题看日志）"}</span>`;
     }
     return `<div class="auto-pills">${items.map((it) => {
-      const bestStr = it.best != null && it.best_ep ? `优 ${fmtVal(it.best, it.is_pct)}@${it.best_ep}` : "";
-      return `<span class="metric-pill"><span class="mlbl">${esc(it.label)}</span><span class="mval">${fmtVal(it.latest, it.is_pct)}</span>${bestStr ? `<span class="mbest">${bestStr}</span>` : ""}</span>`;
+      const bestStr = it.best != null && it.best_ep ? `优 ${fmtVal(it.best, it.is_pct)}@E${it.best_ep}` : "";
+      const dStr = deltaBadgeHtml(r, it.best ?? it.latest, it.key, it.is_pct, it.higher !== false);
+      return `<span class="metric-pill"><span class="mlbl">${esc(it.label)}</span><span class="mval" style="color:var(--c-cur)">${fmtVal(it.latest, it.is_pct)}</span>${bestStr ? `<span class="mbest" style="color:var(--c-best)">${bestStr}</span>` : ""}${dStr ? `<span>${dStr}</span>` : ""}</span>`;
     }).join("")}</div>`;
   }
 
@@ -1869,33 +2196,38 @@
     ths.push(`<th style="text-align:right;">操作</th>`);
     thead.innerHTML = `<tr>${ths.join("")}</tr>`;
 
+    const baseRow = getBaselineRow();
     tbody.innerHTML = runs.map((r) => {
       const checked = state.selected.has(r.key) ? "checked" : "";
       const pinned = state.pins.has(r.key);
+      const isBase = !!(baseRow && r.key === baseRow.key);
       const t = r.tests || {};
       const sets = t.sets || {};
       const noteBtn = r.note
         ? `<button type="button" class="note-pill" data-note-key="${esc(r.key)}">📝 ${esc(r.note)}</button>`
         : `<button type="button" class="note-pill empty" data-note-key="${esc(r.key)}">+ 备注</button>`;
+      const baseBtn = `<button type="button" class="note-pill ${isBase ? "base-on" : "empty"}" data-base-key="${esc(r.key)}">${isBase ? "🎯 当前基准" : "设为基准"}</button>`;
+      const rowHasTDelta = !!(baseRow && testSets.some((sn) => sets[sn] && (baseRow.tests?.sets || {})[sn]));
       const setCells = testSets.length ? testSets.map((sn) => {
         const sObj = sets[sn];
-        if (!sObj) return `<td class="num-cell" style="color:var(--muted);">–</td>`;
+        if (!sObj) return `<td class="num-cell" style="color:var(--muted);">–${rowHasTDelta ? `<span class="m-delta-row" style="display:block">&nbsp;</span>` : ""}</td>`;
         const entries = Object.entries(sObj);
         const first = primaryTestScore(sObj);
         const rest = entries.filter(([k]) => !first || k !== first.key).slice(0, 2).map(([k, v]) => fmtTestPair(k, v)).join(" · ");
-        return `<td class="num-cell"><span class="num-main best-hi">${first ? esc(fmtTestPair(first.key, first.val)) : "–"}</span>${rest ? `<span class="num-sub">${esc(rest)}</span>` : ""}</td>`;
+        const tdHtml = rowHasTDelta ? testDeltaHtml(r, sn, first) : "";
+        return `<td class="num-cell"><span class="num-main best-hi">${first ? esc(fmtTestPair(first.key, first.val)) : "–"}</span>${rest ? `<span class="num-sub">${esc(rest)}</span>` : ""}${rowHasTDelta ? `<span class="m-delta-row" style="display:block">${tdHtml || "&nbsp;"}</span>` : ""}</td>`;
       }).join("") : `<td style="color:var(--muted);font-size:12.5px;">尚未采集到 Test，可点右侧录入</td>`;
 
       const devTag = r.device ? `<span class="dev-tag">卡 ${esc(r.device)}</span>` : "";
       return `
-        <tr class="run-row">
+        <tr class="run-row ${isBase ? "is-baseline" : ""}">
           <td style="text-align:center;"><input type="checkbox" data-cmp-key="${esc(r.key)}" ${checked}></td>
           <td class="run-cell">
             <div class="run-head">
               <button type="button" class="pin-btn ${pinned ? "pinned" : ""}" data-pin-key="${esc(r.key)}">${pinned ? "★" : "☆"}</button>
               <button type="button" class="run-link" data-open-key="${esc(r.key)}">${esc(r.title)}</button>
             </div>
-            <div class="run-meta"><span class="src-tag">${esc(r.category_zh)}</span>${noteBtn}</div>
+            <div class="run-meta"><span class="src-tag">${esc(r.category_zh)}</span>${noteBtn}${baseBtn}</div>
           </td>
           <td style="white-space:nowrap;"><span class="state-pill state-${esc(r.state)}">${esc(r.state_zh)}</span>${devTag}</td>
           <td style="font-size:12px;color:var(--ink-soft);">${t.has_test ? `${esc(t.ckpt || "–")}<div style="color:var(--muted);font-size:11px;">${esc(t.source || "")} · ${fmtAgo(t.updated, now)}</div>` : `<span style="color:var(--muted);">未测试</span>`}</td>
@@ -2060,7 +2392,24 @@
       minXCut = Math.max(minXAll, Number(state.cmpXStart) || 0);
     }
 
-    // 计算平滑曲线 + 可选 Δ 相对均值模式
+    // 若用户选定了全局基准实验，解析其在该指标下的参考值（用于 Δ 0 轴与参考虚线）
+    const baseRowCmp = getBaselineRow();
+    let cmpBaseVal = null;
+    let cmpBaseLabel = "";
+    if (baseRowCmp) {
+      const targetKey = state.cmpMetric !== "auto"
+        ? state.cmpMetric
+        : (seriesList[0] ? (valid[0]?.hist?.columns || []).find((c) => c.label === seriesList[0].colLabel)?.key : null);
+      if (targetKey) {
+        const rawB = baseRowCmp.best?.[targetKey]?.value ?? baseRowCmp.latest?.[targetKey];
+        if (typeof rawB === "number" && !Number.isNaN(rawB)) {
+          cmpBaseVal = (globalPct && rawB >= 0 && rawB <= 1.0001) ? rawB * 100 : rawB;
+          cmpBaseLabel = `基准 ${baseRowCmp.name.slice(0, 14)}`;
+        }
+      }
+    }
+
+    // 计算平滑曲线 + 可选 Δ 相对基准/均值模式
     const processed = drawList.map((s) => {
       const sm = smoothSeries(s.rawPts, state.cmpSmooth);
       const vis = sm.filter((p) => p.x >= minXCut);
@@ -2069,25 +2418,26 @@
 
     if (state.cmpYMode === "delta" && processed.length >= 2) {
       const meanByX = new Map();
-      for (const s of processed) {
-        for (const p of s.pts) {
-          const cur = meanByX.get(p.x) || { sum: 0, cnt: 0 };
-          cur.sum += p.y;
-          cur.cnt += 1;
-          meanByX.set(p.x, cur);
+      if (cmpBaseVal === null) {
+        for (const s of processed) {
+          for (const p of s.pts) {
+            const cur = meanByX.get(p.x) || { sum: 0, cnt: 0 };
+            cur.sum += p.y;
+            cur.cnt += 1;
+            meanByX.set(p.x, cur);
+          }
         }
       }
       for (const s of processed) {
         s.pts = s.pts.map((p) => {
-          const m = meanByX.get(p.x);
-          const avg = m ? m.sum / m.cnt : p.y;
-          return { x: p.x, y: p.y - avg, absY: p.y };
+          const ref = cmpBaseVal !== null ? cmpBaseVal : (meanByX.get(p.x) ? meanByX.get(p.x).sum / meanByX.get(p.x).cnt : p.y);
+          return { x: p.x, y: p.y - ref, absY: p.y };
         });
       }
     }
 
     const xs = processed.flatMap((s) => s.pts.map((p) => p.x));
-    const ys = processed.flatMap((s) => s.pts.map((p) => p.y)).sort((a, b) => a - b);
+    const ys = processed.flatMap((s) => s.pts.map((p) => p.y)).concat(state.cmpYMode !== "delta" && cmpBaseVal !== null ? [cmpBaseVal] : []).sort((a, b) => a - b);
     const xMin = Math.min(...xs);
     const xMax = Math.max(...xs) === xMin ? xMin + 1 : Math.max(...xs);
 
@@ -2124,6 +2474,10 @@
     if (state.cmpYMode === "delta" && yMin < 0 && yMax > 0) {
       const zy = sy(0);
       gridLines.push(`<line x1="${pad.l}" y1="${zy.toFixed(1)}" x2="${W - pad.r}" y2="${zy.toFixed(1)}" stroke="#8a5610" stroke-width="1.3" stroke-dasharray="5 4"/>`);
+    } else if (state.cmpYMode !== "delta" && cmpBaseVal !== null && cmpBaseVal >= yMin && cmpBaseVal <= yMax) {
+      const by = sy(cmpBaseVal);
+      gridLines.push(`<line x1="${pad.l}" y1="${by.toFixed(1)}" x2="${W - pad.r}" y2="${by.toFixed(1)}" stroke="#8a5610" stroke-width="1.4" stroke-dasharray="6 4"/>`);
+      gridLines.push(`<text x="${pad.l + 6}" y="${Math.max(pad.t + 12, by - 4).toFixed(1)}" fill="#8a5610" font-size="11" font-weight="700">${esc(cmpBaseLabel)} ${cmpBaseVal.toFixed(globalPct ? 2 : 3)}${globalPct ? "%" : ""}</text>`);
     }
 
     const xTicks = [];
@@ -2699,6 +3053,7 @@
       b.onclick = () => {
         state.scope = b.dataset.scope;
         document.querySelectorAll("[data-scope]").forEach((x) => x.classList.toggle("active", x === b));
+        resetLockedOrder();
         paintTable();
       };
     });
@@ -2707,34 +3062,49 @@
       if (!b) return;
       state.cat = b.dataset.cat;
       $("cat-cluster").querySelectorAll("[data-cat]").forEach((x) => x.classList.toggle("active", x === b));
+      resetLockedOrder();
       paintTable();
     });
     document.querySelectorAll("[data-mode]").forEach((b) => {
       b.onclick = () => {
         state.mode = b.dataset.mode;
         document.querySelectorAll("[data-mode]").forEach((x) => x.classList.toggle("active", x === b));
+        resetLockedOrder();
         paintTable();
       };
     });
     $("switch-detail-btn").onclick = () => {
       state.mode = "detail";
       document.querySelectorAll("[data-mode]").forEach((x) => x.classList.toggle("active", x.dataset.mode === "detail"));
+      resetLockedOrder();
       paintTable();
     };
 
+    $("lock-order-btn").onclick = (e) => {
+      state.orderLocked = !state.orderLocked;
+      const btn = e.currentTarget;
+      btn.classList.toggle("active", state.orderLocked);
+      btn.textContent = state.orderLocked ? "🔒 顺序锁定" : "🔓 实时重排";
+      resetLockedOrder();
+      paintTable();
+      toast(state.orderLocked ? "已按当前规则整理并锁定行顺序（刷新不乱跳）" : "已切换为实时动态重排");
+    };
     $("only-tested-btn").onclick = (e) => {
       state.onlyTested = !state.onlyTested;
       e.currentTarget.classList.toggle("active", state.onlyTested);
+      resetLockedOrder();
       paintTable();
     };
     $("hide-short-btn").onclick = (e) => {
       state.hideShort = !state.hideShort;
       e.currentTarget.classList.toggle("active", state.hideShort);
+      resetLockedOrder();
       paintTable();
     };
     $("only-pinned-btn").onclick = (e) => {
       state.onlyPinned = !state.onlyPinned;
       e.currentTarget.classList.toggle("active", state.onlyPinned);
+      resetLockedOrder();
       paintTable();
     };
     $("pick-top-btn").onclick = () => {
@@ -2798,6 +3168,7 @@
       const k = th.dataset.sort;
       if (state.sortKey === k) state.sortDir *= -1;
       else { state.sortKey = k; state.sortDir = -1; }
+      resetLockedOrder();
       paintTable();
     });
     $("jobs-body").addEventListener("click", (e) => {
@@ -2811,11 +3182,31 @@
         paintTable();
         return;
       }
+      const baseBtn = e.target.closest("[data-base-key]");
+      if (baseBtn) { setBaselineKey(baseBtn.dataset.baseKey); return; }
       const noteBtn = e.target.closest("[data-note-key]");
       if (noteBtn) { openNoteModal(noteBtn.dataset.noteKey); return; }
       const testBtn = e.target.closest("[data-test-key]");
       if (testBtn) { openTestModal(testBtn.dataset.testKey); return; }
     });
+
+    // Top synced horizontal scrollbar
+    $("top-scroll").addEventListener("scroll", () => {
+      if (state.syncingScroll) return;
+      state.syncingScroll = true;
+      $("table-wrap").scrollLeft = $("top-scroll").scrollLeft;
+      requestAnimationFrame(() => { state.syncingScroll = false; });
+    });
+    $("table-wrap").addEventListener("scroll", () => {
+      if (state.syncingScroll) return;
+      state.syncingScroll = true;
+      $("top-scroll").scrollLeft = $("table-wrap").scrollLeft;
+      requestAnimationFrame(() => { state.syncingScroll = false; });
+    });
+    window.addEventListener("resize", syncTopScroll);
+    if (typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(() => syncTopScroll()).observe($("table-wrap"));
+    }
     $("jobs-body").addEventListener("change", (e) => {
       const cb = e.target.closest("[data-cmp-key]");
       if (!cb) return;
