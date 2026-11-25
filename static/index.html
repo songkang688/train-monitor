@@ -896,6 +896,16 @@
     border-radius: 4px;
     font-weight: 800;
   }
+  .eta-line {
+    display: block;
+    margin-top: 2px;
+    font-size: 11.5px;
+    line-height: 1.3;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .eta-line b { color: var(--ink-soft); font-weight: 700; }
+  .eta-line.eta-rem b { color: var(--c-cur); }
 
   .num-cell {
     text-align: right;
@@ -1781,6 +1791,31 @@
     const txt = (gap > 0 ? "+" : "") + (pct ? gap.toFixed(2) + "%" : (Math.abs(gap) >= 10 ? gap.toFixed(2) : gap.toFixed(3)));
     return `<span class="delta ${cls}">${txt}</span>`;
   }
+  function fmtDurationZh(sec) {
+    if (sec === null || sec === undefined || Number.isNaN(Number(sec)) || sec < 0) return "";
+    const s = Math.round(Number(sec));
+    if (s < 60) return `${s}秒`;
+    const m = Math.floor(s / 60);
+    const rs = s % 60;
+    if (m < 10) return rs ? `${m}分${rs}秒` : `${m}分`;
+    if (m < 60) return `${m}分`;
+    const h = Math.floor(m / 60);
+    const rm = m % 60;
+    if (h < 24) return rm ? `${h}小时${rm}分` : `${h}小时`;
+    const d = Math.floor(h / 24);
+    const rh = h % 24;
+    return rh ? `${d}天${rh}小时` : `${d}天`;
+  }
+  function etaLinesHtml(r) {
+    const parts = [];
+    if (r.epoch_sec != null && r.epoch_sec > 0) {
+      parts.push(`<span class="eta-line">预估一轮 <b>${fmtDurationZh(r.epoch_sec)}</b></span>`);
+    }
+    if ((r.pid || r.state === "running" || r.state === "starting") && r.eta_total_sec != null && r.eta_total_sec > 0) {
+      parts.push(`<span class="eta-line eta-rem">预估还剩 <b>${fmtDurationZh(r.eta_total_sec)}</b> 跑完</span>`);
+    }
+    return parts.join("");
+  }
   function stagnantBadgeHtml(r) {
     const done = Number(r.epoch_done || 0);
     if (done <= 0) return "";
@@ -2128,6 +2163,7 @@
             <div class="prog-sub">${esc(progBits.join(" · ") || "—")}</div>
             ${pctBar > 0 ? `<div class="prog-bar"><span style="width:${pctBar}%"></span></div>` : ""}
             ${stagHtml}
+            ${etaLinesHtml(r)}
           </td>
           ${metricCells.join("")}
           <td class="num-cell" style="color:var(--muted);font-size:12px;">${fmtAgo(r.updated, now)}</td>

@@ -645,11 +645,85 @@ def _parse_structured_csv(folder: Path) -> dict | None:
     return cm._finalize_parsed(raw_points, meta_by_key, {}, None, "epoch", max_metrics=14)
 
 
+def _parse_dur_sec(text: str) -> float | None:
+    s = str(text or "").strip().lower()
+    if not s or "?" in s:
+        return None
+    m_s = re.match(r"^(\d+(?:\.\d+)?)s$", s)
+    if m_s:
+        return float(m_s.group(1))
+    parts = s.split(":")
+    if len(parts) in (2, 3) and all(re.match(r"^\d+(?:\.\d+)?$", p) for p in parts):
+        nums = [float(p) for p in parts]
+        return nums[0] * 60.0 + nums[1] if len(nums) == 2 else nums[0] * 3600.0 + nums[1] * 60.0 + nums[2]
+    return None
+
+
+def _estimate_epoch_sec(folder: Path | None) -> float | None:
+    if not folder or not folder.is_dir():
+        return None
+    et_file = folder / "epoch_times.txt"
+    if et_file.is_file():
+        try:
+            vals = [v for ln in et_file.read_text(encoding="utf-8", errors="replace").splitlines()
+                    if ln.strip() and (v := _f(ln.strip().split()[-1])) is not None and 0.5 <= v <= 86400]
+            if vals:
+                rec = sorted(vals[-6:])
+                mid = rec[1:-1] if len(rec) >= 4 else rec
+                return round(sum(mid) / len(mid), 1)
+        except OSError:
+            pass
+    for fn in ("results.csv", "train_log.csv", "metrics.csv", "history.csv"):
+        p = folder / fn
+        if not p.is_file():
+            continue
+        rows = _read_csv_rows(p)
+        if not rows:
+            continue
+        pts = []
+        for idx, row in enumerate(rows, start=1):
+            t = _f(row.get("time") or row.get("elapsed") or row.get("elapsed_sec"))
+            if t is None or t <= 0:
+                continue
+            ep_f = _f(row.get("epoch") or row.get("Epoch"))
+            ep = int(round(ep_f)) if ep_f is not None else idx
+            pts.append((ep, t))
+        if len(pts) >= 2:
+            deltas = [(t1 - t0) / (e1 - e0) for (e0, t0), (e1, t1) in zip(pts[:-1], pts[1:])
+                      if (e1 - e0) > 0 and 0.5 <= ((t1 - t0) / (e1 - e0)) <= 86400]
+            if deltas:
+                rec = sorted(deltas[-6:])
+                mid = rec[1:-1] if len(rec) >= 4 else rec
+                return round(sum(mid) / len(mid), 1)
+        elif len(pts) == 1 and pts[0][0] >= 1 and 0.5 <= (pts[0][1] / pts[0][0]) <= 86400:
+            return round(pts[0][1] / pts[0][0], 1)
+        durs = [d for row in rows[-8:] if (d := _f(row.get("epoch_time") or row.get("epoch_sec") or row.get("duration"))) is not None and 0.5 <= d <= 86400]
+        if durs:
+            return round(sum(durs) / len(durs), 1)
+    return None
+
+
+def _compute_eta_fields(base_ep_sec: float | None, prog: dict, ep_done: int, ep_now: int, total: int | None, is_active: bool) -> tuple[float | None, int | None]:
+    ep_sec = base_ep_sec
+    if ep_sec is None and is_active:
+        el = _parse_dur_sec(prog.get("elapsed") or "")
+        rem = _parse_dur_sec(prog.get("remain") or "")
+        if el is not None and rem is not None and (el + rem) >= 1.0:
+            ep_sec = round(el + rem, 1)
+    if not is_active or ep_sec is None or not total or int(total) <= ep_done:
+        return ep_sec, None
+    rem_epochs = max(0.0, float(total) - float(ep_done))
+    bp = prog.get("batch_pct")
+    if ep_now > ep_done and bp is not None and 0 < float(bp) <= 100:
+        rem_epochs = max(0.0, rem_epochs - min(0.95, float(bp) / 100.0))
+    return ep_sec, max(0, int(round(rem_epochs * ep_sec)))
+
+
 def metrics_of(folder: Path | None, log_path: str = "") -> dict:
     fb_log = _find_best_log(folder, log_path)
     watched = []
     if folder and folder.is_dir():
-        for nm in ("results.csv", "triple_val.csv", "train_log.csv", "metrics.csv", "history.csv", "log.csv", "metrics.jsonl", "trainer_state.json"):
+        for nm in ("results.csv", "triple_val.csv", "train_log.csv", "metrics.csv", "history.csv", "log.csv", "metrics.jsonl", "trainer_state.json", "epoch_times.txt"):
             watched.append(_file_sig(folder / nm))
     sig = (tuple(watched), _file_sig(fb_log))
     ckey = f"{folder or ''}|{fb_log or ''}"
@@ -677,8 +751,9 @@ def metrics_of(folder: Path | None, log_path: str = "") -> dict:
             parsed = dict(parsed)
             parsed["test_metrics"] = log_parsed["test_metrics"]
 
+    ep_sec = _estimate_epoch_sec(folder)
     if not parsed:
-        payload = {"rows": [], "columns": [], "latest": {}, "latest_epoch": {}, "best": {}, "test_metrics": {}, "epoch_done": 0, "total": None, "source_kind": "", "auto_summary": []}
+        payload = {"rows": [], "columns": [], "latest": {}, "latest_epoch": {}, "best": {}, "test_metrics": {}, "epoch_done": 0, "total": None, "source_kind": "", "auto_summary": [], "epoch_sec": ep_sec}
     else:
         cols = parsed.get("columns") or []
         latest = parsed.get("latest") or {}
@@ -707,7 +782,7 @@ def metrics_of(folder: Path | None, log_path: str = "") -> dict:
                 "higher": col.get("higher", True),
                 "is_pct": col.get("is_pct", False),
             })
-        payload = {**parsed, "latest_epoch": latest_epoch, "source_kind": source_kind, "auto_summary": auto_summary}
+        payload = {**parsed, "latest_epoch": latest_epoch, "source_kind": source_kind, "auto_summary": auto_summary, "epoch_sec": ep_sec}
     _summary_cache[ckey] = (sig, payload)
     return payload
 
@@ -999,6 +1074,8 @@ def snapshot() -> dict:
         else:
             state = "stopped" if (total and ep_done < total) else "done"
         is_active = state in {"running", "starting"}
+        ep_now_val = ep_now if is_active else ep_done
+        ep_sec_val, eta_total_sec = _compute_eta_fields(met.get("epoch_sec"), prog, ep_done, ep_now_val, total, is_active)
 
         cat = infer_category(path_str or raw_name, met.get("columns") or [])
         nkey = path_str or log_path or raw_name
@@ -1022,7 +1099,7 @@ def snapshot() -> dict:
             "pid": pid,
             "log": log_path or (str(_find_best_log(folder)) if _find_best_log(folder) else ""),
             "epoch_done": ep_done,
-            "epoch_now": ep_now if is_active else ep_done,
+            "epoch_now": ep_now_val,
             "total": total,
             "phase": (prog.get("phase") or "") if is_active else "",
             "batch": prog.get("batch") if is_active else None,
@@ -1030,6 +1107,8 @@ def snapshot() -> dict:
             "batch_pct": prog.get("batch_pct") if is_active else None,
             "speed": (prog.get("speed") or "") if is_active else "",
             "remain": (prog.get("remain") or "") if is_active else "",
+            "epoch_sec": ep_sec_val,
+            "eta_total_sec": eta_total_sec,
             "gpu_mem": (prog.get("gpu_mem") or "") if is_active else "",
             "alert": prog.get("alert") or "",
             "latest": met.get("latest") or {},
