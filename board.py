@@ -448,17 +448,21 @@ def _infer_cmd_dir_and_name(cmd: str, cwd: str) -> tuple[str, str]:
 def _header_ultralytics(path: Path) -> dict:
     try:
         with path.open("rb") as fh:
-            raw = fh.read(200000)
+            raw = fh.read(400000)
     except OSError:
         return {}
     text = ANSI_RE.sub("", raw.decode("utf-8", errors="replace"))
     found = {}
     for line in text.splitlines():
-        if not line.startswith("engine/trainer:"):
-            continue
-        for k, v in TRAINER_FIELD.findall(line):
-            found[k] = v.strip().strip("'\"")
-        break
+        if not found.get("name") and line.startswith("engine/trainer:"):
+            for k, v in TRAINER_FIELD.findall(line):
+                found[k] = v.strip().strip("'\"")
+        if "Logging results to " in line:
+            sd = line.split("Logging results to ", 1)[1].strip().strip("'\"")
+            if sd:
+                found["save_dir"] = sd
+        if found.get("save_dir") and found.get("name"):
+            break
     return found
 
 
@@ -883,8 +887,21 @@ def snapshot() -> dict:
         log_file = stdout if stdout.startswith("/") and Path(stdout).is_file() else ""
         hdr = _header_ultralytics(Path(log_file)) if log_file else {}
         prog = _progress_from_log(Path(log_file)) if log_file else {}
-        run_dir = str(Path(hdr["project"]) / hdr["name"]) if hdr.get("project") and hdr.get("name") else ""
-        name = hdr.get("name") or ""
+        save_dir = hdr.get("save_dir") or ""
+        run_dir = save_dir if save_dir and Path(save_dir).is_dir() else (str(Path(hdr["project"]) / hdr["name"]) if hdr.get("project") and hdr.get("name") else "")
+        name = hdr.get("name") or (Path(run_dir).name if run_dir else "")
+        if not run_dir and log_file and Path(log_file).parent.name == "logs":
+            sib_runs = Path(log_file).parent.parent / "runs"
+            if sib_runs.is_dir():
+                stem = Path(log_file).stem
+                try:
+                    for cand in sib_runs.iterdir():
+                        if cand.is_dir() and (cand.name == stem or stem.endswith(cand.name)):
+                            run_dir = str(cand)
+                            name = name or cand.name
+                            break
+                except OSError:
+                    pass
         if not run_dir:
             inf_d, inf_n = _infer_cmd_dir_and_name(proc["cmd"], proc["cwd"])
             if inf_d:
