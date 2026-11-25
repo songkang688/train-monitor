@@ -1,0 +1,2891 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#e6eef2">
+<title>通用训练监控台 · Universal Training Telemetry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700&family=JetBrains+Mono:wght@500;700&family=Literata:opsz,wght@7..72,650&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<style>
+  :root {
+    --bg: #e6eef2;
+    --bg-subtle: #dce7ec;
+    --ink: #152128;
+    --ink-soft: #2c3d47;
+    --muted: #586a75;
+    --card: #f3f7f9;
+    --paper: #ffffff;
+    --line: #d2dfe5;
+    --line-strong: #bccdd5;
+    --teal: #0d6b65;
+    --teal-hover: #09544f;
+    --teal-soft: #e1f2f0;
+    --teal-ring: rgba(13, 107, 101, 0.28);
+    --copper: #b85027;
+    --copper-soft: #fbeee8;
+    --test-bg: #f8f1e6;
+    --test-head: #f2e7d5;
+    --test-ink: #7d4813;
+    --bad: #9e2a2b;
+    --bad-soft: #fae8e8;
+    --warn: #8a5610;
+    --warn-soft: #fbf0dc;
+    --blue: #1d5b86;
+    --blue-soft: #e6f1f8;
+    --radius-lg: 18px;
+    --radius: 14px;
+    --radius-sm: 9px;
+    --shadow-sm: 0 1px 3px rgba(21, 33, 40, 0.05), 0 1px 2px rgba(21, 33, 40, 0.03);
+    --shadow-md: 0 10px 28px rgba(21, 33, 40, 0.08);
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: light; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1100px 420px at 12% -8%, rgba(13, 107, 101, 0.075), transparent 60%),
+      radial-gradient(900px 380px at 92% -10%, rgba(184, 80, 39, 0.06), transparent 55%),
+      var(--bg);
+    color: var(--ink);
+    font-family: Figtree, "PingFang SC", "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.48;
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--teal);
+    outline-offset: 2px;
+  }
+  button, input, select, textarea {
+    font: inherit;
+    color: inherit;
+  }
+  header, main {
+    width: min(1540px, calc(100% - 34px));
+    margin: 0 auto;
+  }
+  header {
+    padding: 22px 0 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px 24px;
+    flex-wrap: wrap;
+  }
+  .brand-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  h1 {
+    margin: 0;
+    font-family: Literata, "Noto Serif SC", "Source Han Serif SC", Georgia, serif;
+    font-weight: 650;
+    font-size: 32px;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+  }
+  .badge-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: rgba(13, 107, 101, 0.11);
+    color: var(--teal);
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    font-weight: 700;
+  }
+  .badge-pill.subtle {
+    background: rgba(21, 33, 40, 0.07);
+    color: var(--ink-soft);
+    font-weight: 600;
+  }
+  .lede {
+    margin: 6px 0 0;
+    color: var(--muted);
+    font-size: 13px;
+    max-width: 82ch;
+  }
+  .header-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+  }
+  .live-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 4px 6px 4px 12px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    box-shadow: var(--shadow-sm);
+  }
+  .pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--teal);
+    box-shadow: 0 0 0 3px rgba(13, 107, 101, 0.18);
+    flex-shrink: 0;
+  }
+  .pulse-dot.paused { background: var(--warn); box-shadow: none; }
+  .pulse-dot.err { background: var(--bad); box-shadow: 0 0 0 3px rgba(158, 42, 43, 0.2); }
+  #stamp {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  #stamp.err { color: var(--bad); font-weight: 700; }
+
+  .btn {
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--ink-soft);
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+  }
+  .btn:hover { background: var(--card); border-color: var(--line-strong); }
+  .btn.primary { background: var(--teal); border-color: var(--teal); color: #fff; }
+  .btn.primary:hover { background: var(--teal-hover); border-color: var(--teal-hover); }
+  .btn.warn { background: var(--copper-soft); border-color: rgba(184, 80, 39, 0.3); color: var(--copper); }
+  .btn.danger { background: var(--bad-soft); border-color: rgba(158, 42, 43, 0.28); color: var(--bad); }
+  .btn.sm { padding: 3px 9px; font-size: 11.5px; }
+  .btn.active { background: var(--teal); border-color: var(--teal); color: #fff; }
+
+  /* KPI Strip */
+  .kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 10px;
+    margin: 4px 0 14px;
+  }
+  .kpi-card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 11px 15px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .kpi-label { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .kpi-val {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 21px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .kpi-sub { font-size: 12px; color: var(--muted); font-family: inherit; font-weight: 500; }
+  .kpi-good { color: var(--teal); }
+  .kpi-warn { color: var(--copper); }
+  .kpi-bad { color: var(--bad); }
+
+  /* Section Card */
+  .panel {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .panel-head {
+    padding: 11px 16px;
+    background: var(--card);
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .panel-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* GPU Rack */
+  .gpu-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(238px, 1fr));
+    gap: 10px;
+    padding: 12px 14px;
+  }
+  .gpu-grid.collapsed { display: none; }
+  .gpu-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .gpu-card.free {
+    background: linear-gradient(180deg, #f0faf8 0%, #f6fbfa 100%);
+    border-color: rgba(13, 107, 101, 0.32);
+  }
+  .gpu-card.other {
+    background: linear-gradient(180deg, #fdf8ef 0%, #faf6f0 100%);
+    border-color: rgba(138, 86, 16, 0.28);
+  }
+  .gpu-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .gpu-id {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--ink);
+  }
+  .gpu-model {
+    font-size: 11.5px;
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .gpu-thermo {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .bar-row {
+    display: grid;
+    grid-template-columns: 34px 1fr 78px;
+    align-items: center;
+    gap: 7px;
+    font-size: 11.5px;
+  }
+  .bar-lbl { color: var(--muted); font-weight: 600; }
+  .bar-track {
+    height: 7px;
+    background: rgba(21, 33, 40, 0.09);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: var(--teal);
+    transition: width 0.25s ease;
+  }
+  .bar-fill.mem { background: #2c749e; }
+  .bar-fill.hot { background: var(--copper); }
+  .bar-num {
+    text-align: right;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 11.5px;
+    color: var(--ink-soft);
+  }
+  .gpu-jobs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    min-height: 22px;
+  }
+  .job-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 600;
+    border: 1px solid transparent;
+    max-width: 100%;
+  }
+  .job-chip.run {
+    background: var(--teal-soft);
+    color: var(--teal);
+    border-color: rgba(13, 107, 101, 0.22);
+    cursor: pointer;
+  }
+  .job-chip.run:hover { background: #cfeae7; }
+  .job-chip.aux {
+    background: var(--blue-soft);
+    color: var(--blue);
+    border-color: rgba(29, 91, 134, 0.2);
+  }
+  .job-chip.other {
+    background: var(--warn-soft);
+    color: var(--warn);
+    border-color: rgba(138, 86, 16, 0.26);
+  }
+  .job-chip.free {
+    background: rgba(13, 107, 101, 0.12);
+    color: var(--teal);
+  }
+
+  /* Toolbar */
+  .toolbar {
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border-bottom: 1px solid var(--line);
+    background: var(--paper);
+  }
+  .toolbar-row {
+    display: flex;
+    align-items: center;
+    gap: 10px 16px;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+  .cluster-group {
+    display: flex;
+    align-items: center;
+    gap: 8px 14px;
+    flex-wrap: wrap;
+  }
+  .cluster {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px;
+    border-radius: 999px;
+    background: var(--card);
+    border: 1px solid var(--line);
+  }
+  .cluster-lbl {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--muted);
+    padding: 0 7px 0 8px;
+    white-space: nowrap;
+  }
+  .seg-btn {
+    border: none;
+    background: transparent;
+    color: var(--ink-soft);
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .seg-btn:hover { background: rgba(21, 33, 40, 0.06); }
+  .seg-btn.active {
+    background: var(--teal);
+    color: #fff;
+    box-shadow: 0 1px 2px rgba(13, 107, 101, 0.25);
+  }
+  .seg-btn.test-tab.active { background: var(--copper); }
+
+  .search-wrap {
+    position: relative;
+    flex: 1 1 220px;
+    max-width: 340px;
+  }
+  .search-wrap input {
+    width: 100%;
+    padding: 6px 32px 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    font-size: 13px;
+  }
+  .search-wrap input:focus {
+    background: var(--paper);
+    border-color: var(--teal);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--teal-ring);
+  }
+  .kbd-hint {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 0 5px;
+    pointer-events: none;
+  }
+
+  .notice-strip {
+    padding: 8px 16px;
+    background: #eef6f7;
+    border-bottom: 1px solid var(--line);
+    color: var(--ink-soft);
+    font-size: 12.5px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .notice-strip.hidden { display: none; }
+
+  /* Compare Panel */
+  #compare-bar {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 16px;
+    background: linear-gradient(90deg, #e5f3f1 0%, #f1f7f9 100%);
+    border-bottom: 1px solid rgba(13, 107, 101, 0.24);
+    flex-wrap: wrap;
+  }
+  #compare-bar.show { display: flex; }
+  #compare-wrap {
+    display: none;
+    padding: 14px 16px 16px;
+    border-bottom: 1px solid var(--line);
+    background: #fafcfd;
+  }
+  #compare-wrap.show { display: block; }
+  .cmp-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 14px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .cmp-select {
+    padding: 5px 10px;
+    border-radius: 9px;
+    border: 1px solid var(--line-strong);
+    background: var(--paper);
+    font-size: 13px;
+    font-weight: 600;
+    max-width: 300px;
+  }
+  .svg-frame {
+    position: relative;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 8px;
+    overflow: hidden;
+  }
+  .svg-frame svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .chart-tip {
+    position: absolute;
+    pointer-events: none;
+    background: rgba(21, 33, 40, 0.94);
+    color: #f4f8fa;
+    padding: 8px 11px;
+    border-radius: 9px;
+    font-size: 12px;
+    line-height: 1.5;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+    z-index: 12;
+    max-width: 320px;
+    display: none;
+    font-variant-numeric: tabular-nums;
+  }
+  .cmp-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 10px;
+  }
+  .legend-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    transition: opacity 0.15s ease, border-color 0.15s ease;
+  }
+  .legend-pill.dim { opacity: 0.35; text-decoration: line-through; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .cmp-rank-wrap {
+    margin-top: 12px;
+    overflow-x: auto;
+  }
+  .mini-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+  .mini-table th, .mini-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    font-variant-numeric: tabular-nums;
+  }
+  .mini-table th {
+    background: var(--card);
+    color: var(--muted);
+    font-weight: 700;
+    font-size: 11.5px;
+    white-space: nowrap;
+  }
+  .mini-table td.num, .mini-table th.num {
+    text-align: right;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+  }
+
+  /* Main Table */
+  .table-wrap {
+    overflow-x: auto;
+    max-height: 76vh;
+  }
+  table.board {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13.5px;
+  }
+  table.board thead th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: var(--card);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 10px 10px;
+    border-bottom: 1px solid var(--line-strong);
+    text-align: left;
+    white-space: nowrap;
+    user-select: none;
+  }
+  table.board thead th.num { text-align: right; }
+  table.board thead th.sortable { cursor: pointer; }
+  table.board thead th.sortable:hover { color: var(--teal); }
+  table.board thead th.test-col { background: var(--test-head); color: var(--test-ink); }
+  table.board tbody tr.run-row td {
+    padding: 10px 10px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: middle;
+    background: var(--paper);
+  }
+  table.board tbody tr.run-row:hover td { background: #f6fafb; }
+  table.board tbody tr.run-row.has-sub td { border-bottom: none; padding-bottom: 7px; }
+  table.board tbody tr.test-subrow td {
+    padding: 5px 12px 9px 44px;
+    background: linear-gradient(90deg, var(--test-bg) 0%, #fcf9f3 100%);
+    border-bottom: 1px solid var(--line);
+    font-size: 12.5px;
+  }
+  .test-sub-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 14px;
+    flex-wrap: wrap;
+  }
+  .test-sub-left {
+    display: flex;
+    align-items: center;
+    gap: 6px 8px;
+    flex-wrap: wrap;
+  }
+  .test-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(184, 80, 39, 0.13);
+    color: var(--copper);
+    font-weight: 700;
+    font-size: 11.5px;
+  }
+  .test-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 8px;
+    border-radius: 7px;
+    background: var(--paper);
+    border: 1px solid rgba(184, 80, 39, 0.22);
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11.5px;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-soft);
+  }
+  .test-chip strong { color: var(--test-ink); font-family: inherit; }
+
+  .run-cell {
+    min-width: 240px;
+    max-width: 420px;
+  }
+  .run-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .pin-btn {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    color: #b5c4cc;
+    padding: 1px 2px;
+  }
+  .pin-btn.pinned { color: #d68b1f; }
+  .run-link {
+    border: none;
+    background: transparent;
+    padding: 0;
+    text-align: left;
+    font-weight: 700;
+    color: var(--ink);
+    cursor: pointer;
+    word-break: break-word;
+  }
+  .run-link:hover { color: var(--teal); text-decoration: underline; }
+  .run-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+  .src-tag {
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 5px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    color: var(--muted);
+  }
+  .src-tag.console { background: #e8f3f2; border-color: rgba(13, 107, 101, 0.24); color: var(--teal); }
+  .note-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 300px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    cursor: pointer;
+    border: 1px solid rgba(138, 86, 16, 0.28);
+    background: var(--warn-soft);
+    color: var(--warn);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .note-pill.empty {
+    background: transparent;
+    border-style: dashed;
+    border-color: var(--line-strong);
+    color: var(--muted);
+  }
+  .note-pill.empty:hover { border-color: var(--teal); color: var(--teal); }
+  .alert-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 7px;
+    border-radius: 6px;
+    background: var(--bad-soft);
+    color: var(--bad);
+    font-size: 11.5px;
+    font-weight: 600;
+    max-width: 280px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .state-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .state-running { background: var(--teal-soft); color: var(--teal); }
+  .state-starting { background: var(--blue-soft); color: var(--blue); }
+  .state-done { background: #e7eef2; color: var(--ink-soft); }
+  .state-stopped { background: var(--warn-soft); color: var(--warn); }
+  .state-failed { background: var(--bad-soft); color: var(--bad); }
+  .dev-tag {
+    display: inline-block;
+    margin-left: 5px;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 5px;
+    background: rgba(21, 33, 40, 0.07);
+    color: var(--ink-soft);
+  }
+
+  .prog-cell { min-width: 126px; font-variant-numeric: tabular-nums; }
+  .prog-main {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 12.5px;
+    font-weight: 700;
+  }
+  .prog-sub { font-size: 11.5px; color: var(--muted); }
+  .prog-bar {
+    height: 5px;
+    margin-top: 4px;
+    background: rgba(21, 33, 40, 0.09);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .prog-bar span { display: block; height: 100%; background: var(--teal); border-radius: 999px; }
+
+  .num-cell {
+    text-align: right;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .num-main { font-weight: 700; font-size: 13.5px; color: var(--ink); }
+  .num-main.best-hi { color: var(--teal); }
+  .num-sub { display: block; font-size: 11px; color: var(--muted); font-weight: 500; }
+
+  .auto-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 240px;
+  }
+  .metric-pill {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 5px;
+    padding: 4px 9px;
+    border-radius: 8px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+  }
+  .metric-pill .mlbl {
+    font-family: inherit;
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .metric-pill .mval { font-weight: 700; color: var(--ink); }
+  .metric-pill .mbest { font-size: 10.5px; color: var(--teal); }
+
+  .empty-state {
+    padding: 42px 20px;
+    text-align: center;
+    color: var(--muted);
+  }
+  .empty-state h3 { margin: 0 0 8px; color: var(--ink); font-size: 16px; }
+  .empty-state code {
+    background: var(--card);
+    border: 1px solid var(--line);
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 12px;
+  }
+
+  /* Drawer */
+  #drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 24, 31, 0.36);
+    backdrop-filter: blur(2px);
+    z-index: 40;
+    display: none;
+  }
+  #drawer-backdrop.open { display: block; }
+  #drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(780px, 96vw);
+    background: var(--paper);
+    border-left: 1px solid var(--line);
+    box-shadow: -12px 0 36px rgba(15, 24, 31, 0.16);
+    z-index: 45;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.22s ease;
+  }
+  #drawer.open { transform: translateX(0); }
+  .drawer-head {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--line);
+    background: var(--card);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .drawer-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 13px 15px;
+  }
+  .drawer-card.test-card {
+    background: var(--test-bg);
+    border-color: rgba(184, 80, 39, 0.26);
+  }
+  .drawer-card h4 {
+    margin: 0 0 9px;
+    font-size: 13.5px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .path-mono {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    word-break: break-all;
+    margin-top: 4px;
+  }
+  .note-ta {
+    width: 100%;
+    min-height: 68px;
+    padding: 8px 10px;
+    border-radius: 9px;
+    border: 1px solid var(--line-strong);
+    background: var(--paper);
+    resize: vertical;
+  }
+  .quick-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .log-box {
+    background: #0f181f;
+    color: #d6e4ec;
+    border-radius: 10px;
+    padding: 11px 13px;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 300px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .log-err { color: #ff8f8f; font-weight: 700; }
+  .img-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+  .img-thumb {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--paper);
+    cursor: pointer;
+    text-align: center;
+  }
+  .img-thumb img {
+    width: 100%;
+    height: 110px;
+    object-fit: cover;
+    display: block;
+  }
+  .img-thumb span {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    padding: 4px 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Modals */
+  .modal-bg {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 24, 31, 0.45);
+    z-index: 60;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .modal-bg.open { display: flex; }
+  .modal-box {
+    width: min(560px, 96vw);
+    background: var(--paper);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+  }
+  .modal-head {
+    padding: 13px 18px;
+    background: var(--card);
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 700;
+  }
+  .modal-body {
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 75vh;
+    overflow-y: auto;
+  }
+  .modal-foot {
+    padding: 11px 18px;
+    border-top: 1px solid var(--line);
+    background: var(--card);
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .field-lbl {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .inp {
+    width: 100%;
+    padding: 7px 10px;
+    border-radius: 9px;
+    border: 1px solid var(--line-strong);
+    background: var(--paper);
+    font-size: 13px;
+  }
+  .test-edit-row {
+    display: grid;
+    grid-template-columns: 150px 1fr 30px;
+    gap: 8px;
+    align-items: center;
+  }
+  #img-modal img {
+    max-width: 92vw;
+    max-height: 88vh;
+    border-radius: 10px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+    background: #fff;
+  }
+
+  /* Toast */
+  #toast {
+    position: fixed;
+    bottom: 22px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(21, 33, 40, 0.94);
+    color: #fff;
+    padding: 9px 16px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    z-index: 90;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation: none !important; }
+  }
+  @media (max-width: 720px) {
+    header, main { width: calc(100% - 20px); }
+    h1 { font-size: 26px; }
+    .test-edit-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="brand-row">
+      <h1>通用训练监控台</h1>
+      <span class="badge-pill">Universal · 零依赖</span>
+      <span class="badge-pill subtle" id="user-badge">用户: –</span>
+    </div>
+    <p class="lede" id="roots-lede">自动发现本机 GPU 占用与实时训练进程；自动解析 CSV / JSONL / HuggingFace 与控制台打印指标（严格白名单防噪音）。</p>
+  </div>
+  <div class="header-right">
+    <div class="live-controls">
+      <span class="pulse-dot" id="pulse-dot" aria-hidden="true"></span>
+      <span id="stamp">连接中…</span>
+      <button class="btn sm" id="pause-btn" type="button">暂停</button>
+      <button class="btn sm" id="refresh-btn" type="button">刷新</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- KPI Strip -->
+  <section class="kpi-strip" aria-label="核心概览">
+    <div class="kpi-card">
+      <span class="kpi-label">正在运行</span>
+      <div class="kpi-val"><span id="kpi-running" class="kpi-good">0</span><span class="kpi-sub" id="kpi-total">共 0 条实验</span></div>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-label">显卡概览与空闲卡</span>
+      <div class="kpi-val"><span id="kpi-gpu">–</span><span class="kpi-sub" id="kpi-free">检测中</span></div>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-label">独立测试结果 (Test)</span>
+      <div class="kpi-val"><span id="kpi-tested">0</span><span class="kpi-sub" id="kpi-test-sets">0 个测试集</span></div>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-label">异常 / 报错告警</span>
+      <div class="kpi-val"><span id="kpi-alert" class="kpi-good">0</span><span class="kpi-sub" id="kpi-alert-sub">运行状态平稳</span></div>
+    </div>
+  </section>
+
+  <!-- GPU Rack -->
+  <section class="panel" id="gpu-panel">
+    <div class="panel-head">
+      <div class="panel-title">
+        <span>显卡实时机架</span>
+        <span class="badge-pill subtle" id="gpu-summary-pill">检测中</span>
+      </div>
+      <button class="btn sm" id="gpu-toggle" type="button">收起</button>
+    </div>
+    <div class="gpu-grid" id="gpu-grid"></div>
+  </section>
+
+  <!-- Main Experiments Board -->
+  <section class="panel">
+    <div class="toolbar">
+      <div class="toolbar-row">
+        <div class="cluster-group">
+          <div class="cluster" role="group" aria-label="时间范围">
+            <span class="cluster-lbl">范围</span>
+            <button class="seg-btn" data-scope="live" type="button">正在跑</button>
+            <button class="seg-btn" data-scope="48h" type="button">48h 内</button>
+            <button class="seg-btn" data-scope="7d" type="button">7D 内</button>
+            <button class="seg-btn active" data-scope="all" type="button">全部</button>
+          </div>
+          <div class="cluster" role="group" aria-label="实验类别" id="cat-cluster">
+            <span class="cluster-lbl">类别</span>
+            <button class="seg-btn active" data-cat="all" type="button">全部</button>
+          </div>
+          <div class="cluster" role="group" aria-label="指标视图">
+            <span class="cluster-lbl">指标</span>
+            <button class="seg-btn active" data-mode="key" type="button">重点</button>
+            <button class="seg-btn" data-mode="detail" type="button">详细</button>
+            <button class="seg-btn test-tab" data-mode="test" type="button">测试结果</button>
+          </div>
+        </div>
+        <div class="search-wrap">
+          <input id="search-input" type="search" placeholder="搜索实验名、路径、备注、卡号、测试集…" aria-label="搜索实验">
+          <span class="kbd-hint">/</span>
+        </div>
+      </div>
+
+      <div class="toolbar-row">
+        <div class="cluster-group">
+          <button class="btn sm" id="only-tested-btn" type="button">仅看有 Test</button>
+          <button class="btn sm" id="hide-short-btn" type="button">隐藏短试跑 (&lt;5轮)</button>
+          <button class="btn sm" id="only-pinned-btn" type="button">仅看已置顶 ★</button>
+          <button class="btn sm" id="pick-top-btn" type="button">勾选前 5 条对比</button>
+        </div>
+        <div class="cluster-group">
+          <button class="btn sm" id="export-md-btn" type="button">复制 Markdown 表</button>
+          <button class="btn sm" id="notify-btn" type="button">跑完提醒我</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="notice-strip hidden" id="hetero-notice">
+      <span id="hetero-notice-text"></span>
+      <button class="btn sm" id="switch-detail-btn" type="button">展开全部对齐列</button>
+    </div>
+
+    <!-- Compare Bar & High-Plateau Chart -->
+    <div id="compare-bar">
+      <div>
+        <strong id="cmp-count">已选 0 条实验</strong>
+        <span style="color:var(--muted);font-size:12.5px;margin-left:8px;">勾选 2 条及以上自动展开高段分离对比图</span>
+      </div>
+      <div class="cluster-group">
+        <button class="btn sm" id="cmp-clear-btn" type="button">清空勾选</button>
+      </div>
+    </div>
+
+    <div id="compare-wrap">
+      <div class="cmp-controls">
+        <div class="cluster-group">
+          <label for="cmp-metric" style="font-size:12.5px;font-weight:700;color:var(--muted);">对比指标</label>
+          <select id="cmp-metric" class="cmp-select"></select>
+          <div class="cluster" role="group" aria-label="纵轴模式">
+            <span class="cluster-lbl">纵轴</span>
+            <button class="seg-btn active" data-ymode="focus" type="button">聚焦高段</button>
+            <button class="seg-btn" data-ymode="delta" type="button">相对均值 Δ</button>
+            <button class="seg-btn" data-ymode="full" type="button">全景</button>
+          </div>
+          <div class="cluster" role="group" aria-label="起始区间">
+            <span class="cluster-lbl">起点</span>
+            <button class="seg-btn active" data-xstart="skip" type="button">跳过热身</button>
+            <button class="seg-btn" data-xstart="0" type="button">第 1 轮</button>
+            <button class="seg-btn" data-xstart="20" type="button">≥20</button>
+            <button class="seg-btn" data-xstart="50" type="button">≥50</button>
+            <button class="seg-btn" data-xstart="tail50" type="button">后 50 轮</button>
+          </div>
+          <div class="cluster" role="group" aria-label="平滑窗口">
+            <span class="cluster-lbl">平滑</span>
+            <button class="seg-btn active" data-smooth="1" type="button">原始</button>
+            <button class="seg-btn" data-smooth="3" type="button">3</button>
+            <button class="seg-btn" data-smooth="5" type="button">5</button>
+            <button class="seg-btn" data-smooth="9" type="button">9</button>
+          </div>
+        </div>
+      </div>
+      <div class="svg-frame" id="cmp-svg-frame">
+        <svg id="cmp-svg" viewBox="0 0 1120 356" role="img" aria-label="多实验指标对比曲线"></svg>
+        <div class="chart-tip" id="cmp-tip"></div>
+      </div>
+      <div class="cmp-legend" id="cmp-legend"></div>
+      <div class="cmp-rank-wrap" id="cmp-rank"></div>
+    </div>
+
+    <!-- Experiments Table -->
+    <div class="table-wrap">
+      <table class="board" id="jobs-table">
+        <thead id="jobs-head"></thead>
+        <tbody id="jobs-body"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<!-- Detail Drawer -->
+<div id="drawer-backdrop"></div>
+<aside id="drawer" aria-label="实验详情">
+  <div class="drawer-head">
+    <div style="min-width:0;">
+      <div class="brand-row" style="gap:7px;">
+        <h2 id="dr-title" style="margin:0;font-size:19px;word-break:break-word;">实验详情</h2>
+        <span class="badge-pill subtle" id="dr-cat">–</span>
+        <span class="src-tag" id="dr-src">–</span>
+      </div>
+      <div class="path-mono" id="dr-path"></div>
+    </div>
+    <div style="display:flex;gap:6px;flex-shrink:0;">
+      <button class="btn sm" id="dr-copy-path" type="button">复制路径</button>
+      <button class="btn sm" id="dr-close" type="button" aria-label="关闭详情">✕</button>
+    </div>
+  </div>
+  <div class="drawer-body">
+    <!-- Note -->
+    <div class="drawer-card">
+      <h4><span>📝 实验备注</span><span id="dr-note-status" style="font-size:11.5px;color:var(--muted);font-weight:500;">服务端持久化</span></h4>
+      <textarea id="dr-note-ta" class="note-ta" placeholder="输入实验配置差异、调参动机、结论或待办…"></textarea>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;">
+        <div class="quick-tags" id="dr-quick-tags" style="margin:0;"></div>
+        <button class="btn sm primary" id="dr-note-save" type="button">保存备注</button>
+      </div>
+    </div>
+
+    <!-- Independent Test Result -->
+    <div class="drawer-card test-card">
+      <h4>
+        <span>🧪 独立测试结果 (Test)</span>
+        <button class="btn sm warn" id="dr-edit-test" type="button">录入 / 编辑 Test</button>
+      </h4>
+      <div id="dr-test-body" style="font-size:13px;color:var(--ink-soft);">暂无额外 Test 记录</div>
+    </div>
+
+    <!-- Charts -->
+    <div class="drawer-card">
+      <h4>
+        <span>📈 训练 / 验证曲线</span>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;gap:5px;">
+          <input type="checkbox" id="dr-focus-chk" checked> 聚焦高段
+        </label>
+      </h4>
+      <div id="dr-charts"></div>
+    </div>
+
+    <!-- Terminal Log -->
+    <div class="drawer-card">
+      <h4>
+        <span>🖥️ 控制台日志 / 报错检视</span>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          <select id="dr-log-select" class="cmp-select" style="padding:3px 7px;font-size:11.5px;display:none;"></select>
+          <button class="btn sm" id="dr-log-more" type="button">300 行</button>
+          <button class="btn sm" id="dr-log-refresh" type="button">刷新日志</button>
+        </div>
+      </h4>
+      <div class="log-box" id="dr-log-box">加载日志中…</div>
+    </div>
+
+    <!-- Images -->
+    <div class="drawer-card" id="dr-img-card" style="display:none;">
+      <h4><span>🖼️ 训练产物图</span></h4>
+      <div class="img-grid" id="dr-img-grid"></div>
+    </div>
+
+    <!-- History Table -->
+    <div class="drawer-card" id="dr-hist-card" style="display:none;">
+      <h4><span>📋 逐轮指标明细（最近 60 步）</span></h4>
+      <div style="overflow-x:auto;max-height:300px;" id="dr-hist-wrap"></div>
+    </div>
+  </div>
+</aside>
+
+<!-- Note Modal -->
+<div class="modal-bg" id="note-modal" role="dialog" aria-modal="true" aria-labelledby="note-modal-title">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span id="note-modal-title">编辑实验备注</span>
+      <button class="btn sm" data-close="note-modal" type="button">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:12.5px;color:var(--muted);" id="nm-run-name"></div>
+      <textarea id="nm-ta" class="note-ta" rows="4" placeholder="记录改动点、超参、数据版本或结论…"></textarea>
+      <div class="quick-tags" id="nm-tags"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn sm" data-close="note-modal" type="button">取消</button>
+      <button class="btn sm primary" id="nm-save" type="button">保存备注</button>
+    </div>
+  </div>
+</div>
+
+<!-- Universal Test Result Modal -->
+<div class="modal-bg" id="test-modal" role="dialog" aria-modal="true" aria-labelledby="test-modal-title">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span id="test-modal-title">录入 / 编辑独立测试结果 (Test)</span>
+      <button class="btn sm" data-close="test-modal" type="button">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:12.5px;color:var(--muted);" id="tm-run-name"></div>
+      <div>
+        <label class="field-lbl" for="tm-ckpt">测试权重 / 备注说明</label>
+        <input id="tm-ckpt" class="inp" placeholder="例如：best.pt / epoch_30 / EMA权重">
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span class="field-lbl" style="margin:0;">测试集与指标（支持多指标：如 <code>mAP50=72.4, F1=81.2</code> 或单数值 <code>92.5</code>）</span>
+          <button class="btn sm" id="tm-add-row" type="button">+ 加一组</button>
+        </div>
+        <div id="tm-rows" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+    </div>
+    <div class="modal-foot" style="justify-content:space-between;">
+      <button class="btn sm danger" id="tm-clear" type="button">清空手动录入</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn sm" data-close="test-modal" type="button">取消</button>
+        <button class="btn sm primary" id="tm-save" type="button">保存 Test 结果</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Image Lightbox -->
+<div class="modal-bg" id="img-modal" role="dialog" aria-modal="true">
+  <img id="img-modal-src" alt="训练产物大图">
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const PALETTE = ["#0d6b65", "#b85027", "#235ea8", "#7e3fa8", "#a87008", "#c22b4d", "#187a53", "#495663"];
+  const QUICK_TAGS = ["基线", "最优候选", "涨点", "收敛稳", "过拟合", "待测 Test", "小试跑", "已放弃"];
+  const STORE = {
+    pins: "utb_pins_v1",
+    gpuCollapsed: "utb_gpu_collapsed_v1",
+  };
+
+  const state = {
+    data: null,
+    paused: false,
+    scope: "all",
+    cat: "all",
+    mode: "key", // key | detail | test
+    onlyTested: false,
+    hideShort: false,
+    onlyPinned: false,
+    query: "",
+    sortKey: null,
+    sortDir: -1,
+    pins: new Set(loadJson(STORE.pins, [])),
+    selected: new Set(),
+    hiddenCurves: new Set(),
+    hoverCurve: null,
+    cmpMetric: "auto",
+    cmpYMode: "focus", // focus | delta | full
+    cmpXStart: "skip", // skip | 0 | 20 | 50 | tail50
+    cmpSmooth: 1,
+    histCache: new Map(), // key -> {at, data}
+    drawerKey: null,
+    drawerPath: "",
+    drawerLog: "",
+    drawerData: null,
+    drawerLogLines: 120,
+    notifyOn: false,
+    prevRunning: new Set(),
+    noteTargetKey: "",
+    testTargetKey: "",
+  };
+
+  const $ = (id) => document.getElementById(id);
+
+  function loadJson(k, fb) {
+    try { return JSON.parse(localStorage.getItem(k) || "null") ?? fb; } catch { return fb; }
+  }
+  function saveJson(k, v) {
+    try { localStorage.setItem(k, JSON.stringify(v)); } catch {}
+  }
+  function esc(s) {
+    return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  function toast(msg) {
+    const el = $("toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => el.classList.remove("show"), 2400);
+  }
+
+  function fmtVal(v, isPct = false) {
+    if (v === null || v === undefined || Number.isNaN(Number(v))) return "–";
+    const n = Number(v);
+    if (isPct) {
+      const scaled = (n >= 0 && n <= 1.0001) ? n * 100 : n;
+      return scaled.toFixed(2) + "%";
+    }
+    const a = Math.abs(n);
+    if (a >= 100) return n.toFixed(2);
+    if (a >= 10) return n.toFixed(3);
+    if (a >= 0.01 || a === 0) return n.toFixed(4);
+    return n.toExponential(2);
+  }
+  function fmtDelta(v, isPct = false) {
+    if (v === null || v === undefined || Number.isNaN(Number(v))) return "–";
+    const n = Number(v);
+    const sign = n > 0 ? "+" : "";
+    if (isPct) {
+      const scaled = Math.abs(n) <= 1.0001 ? n * 100 : n;
+      return sign + scaled.toFixed(2) + "%";
+    }
+    return sign + (Math.abs(n) >= 10 ? n.toFixed(2) : n.toFixed(4));
+  }
+  function fmtAgo(ts, now) {
+    if (!ts) return "–";
+    const d = Math.max(0, Math.floor((now || Date.now() / 1000) - ts));
+    if (d < 60) return d + "秒前";
+    if (d < 3600) return Math.floor(d / 60) + "分钟前";
+    if (d < 86400) return Math.floor(d / 3600) + "小时前";
+    return Math.floor(d / 86400) + "天前";
+  }
+  function isPctMetricName(name) {
+    const low = String(name || "").toLowerCase();
+    return /(map|acc|top1|top5|f1|miou|iou|dice|mdsc|precision|recall|auc|auroc|ap50|ap75|pass@|em\b|rouge|bleu|ssim)/.test(low);
+  }
+  function fmtTestPair(k, v) {
+    const pct = isPctMetricName(k);
+    const n = Number(v);
+    if (Number.isNaN(n)) return `${k}=${v}`;
+    const disp = pct ? ((n >= 0 && n <= 1.0001) ? (n * 100).toFixed(2) + "%" : n.toFixed(2) + "%") : fmtVal(n, false);
+    return `${k} ${disp}`;
+  }
+  function primaryTestScore(setObj) {
+    if (!setObj || typeof setObj !== "object") return null;
+    const entries = Object.entries(setObj).filter(([, v]) => typeof v === "number" && !Number.isNaN(v));
+    if (!entries.length) return null;
+    const prio = ["map50", "map50-95", "acc", "top1", "f1", "miou", "dice", "mdsc", "auc", "auroc", "psnr", "score"];
+    for (const p of prio) {
+      const hit = entries.find(([k]) => k.toLowerCase().includes(p));
+      if (hit) return { key: hit[0], val: hit[1] };
+    }
+    return { key: entries[0][0], val: entries[0][1] };
+  }
+
+  function runByKey(k) {
+    return (state.data?.runs || []).find((r) => r.key === k) || null;
+  }
+
+  function filteredRuns() {
+    const runs = state.data?.runs || [];
+    const now = state.data?.now || Date.now() / 1000;
+    const q = state.query.trim().toLowerCase();
+    return runs.filter((r) => {
+      if (state.scope === "live" && !r.pid && r.state !== "running" && r.state !== "starting") return false;
+      if (state.scope === "48h" && (now - (r.updated || 0)) > 48 * 3600 && !r.pid) return false;
+      if (state.scope === "7d" && (now - (r.updated || 0)) > 7 * 86400 && !r.pid) return false;
+      if (state.cat !== "all" && r.category !== state.cat) return false;
+      if (state.onlyTested && !(r.tests && r.tests.has_test)) return false;
+      if (state.hideShort && !r.pid && (r.epoch_done || 0) < 5) return false;
+      if (state.onlyPinned && !state.pins.has(r.key)) return false;
+      if (q) {
+        const testNames = Object.keys((r.tests && r.tests.sets) || {}).join(" ");
+        const hay = `${r.title} ${r.name} ${r.path} ${r.note} ${r.category_zh} ${r.device} ${testNames}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }
+
+  function sortRuns(list) {
+    const out = list.slice();
+    out.sort((a, b) => {
+      const pa = state.pins.has(a.key) ? 0 : 1;
+      const pb = state.pins.has(b.key) ? 0 : 1;
+      if (pa !== pb) return pa - pb;
+      if (state.sortKey) {
+        const va = extractSortVal(a, state.sortKey);
+        const vb = extractSortVal(b, state.sortKey);
+        if (va === null && vb === null) return 0;
+        if (va === null) return 1;
+        if (vb === null) return -1;
+        if (va !== vb) return (va < vb ? -1 : 1) * state.sortDir;
+      }
+      const ra = a.pid ? 0 : (a.state === "running" ? 1 : 2);
+      const rb = b.pid ? 0 : (b.state === "running" ? 1 : 2);
+      if (ra !== rb) return ra - rb;
+      return (b.updated || 0) - (a.updated || 0);
+    });
+    return out;
+  }
+
+  function extractSortVal(r, key) {
+    if (key === "_updated") return r.updated || 0;
+    if (key === "_epoch") return r.epoch_done || r.epoch_now || 0;
+    if (key === "_name") return (r.title || r.name || "").toLowerCase();
+    if (key.startsWith("test:")) {
+      const sn = key.slice(5);
+      const p = primaryTestScore((r.tests?.sets || {})[sn]);
+      if (!p) return null;
+      return isPctMetricName(p.key) && p.val <= 1.0001 ? p.val * 100 : p.val;
+    }
+    const bv = r.best?.[key]?.value;
+    const lv = r.latest?.[key];
+    const v = bv !== undefined ? bv : lv;
+    return typeof v === "number" ? v : null;
+  }
+
+  /* ---------- Render Header, KPIs & GPU Rack ---------- */
+  function paintHeaderAndKpi() {
+    const d = state.data;
+    if (!d) return;
+    $("user-badge").textContent = `用户: ${d.user || "–"}`;
+    const roots = d.roots || [];
+    $("roots-lede").textContent = roots.length
+      ? `正在监视 ${roots.length} 个实验根目录（${roots.slice(0, 2).join(" · ")}${roots.length > 2 ? " 等" : ""}）及本机实时 GPU 训练进程；支持 CSV/JSONL/控制台自动提取与防乱白名单。`
+      : "当前处于零配置实时模式：自动监视本机全部显卡与当前用户的实时训练进程（可在 config.json 或 --root 中追加历史实验目录）。";
+
+    const runs = d.runs || [];
+    const running = runs.filter((r) => r.pid || r.state === "running" || r.state === "starting");
+    const tested = runs.filter((r) => r.tests && r.tests.has_test);
+    const alerts = runs.filter((r) => r.alert || r.state === "failed");
+
+    $("kpi-running").textContent = String(running.length);
+    $("kpi-total").textContent = `共 ${runs.length} 条实验`;
+
+    const gpus = d.gpus || [];
+    if (gpus.length) {
+      const avgUtil = Math.round(gpus.reduce((s, g) => s + (g.util || 0), 0) / gpus.length);
+      const freeIds = gpus.filter((g) => g.free).map((g) => g.index);
+      const memUsed = gpus.reduce((s, g) => s + (g.memory_used || 0), 0) / 1024;
+      const memTot = gpus.reduce((s, g) => s + (g.memory_total || 0), 0) / 1024;
+      $("kpi-gpu").textContent = `${avgUtil}%`;
+      $("kpi-free").textContent = freeIds.length
+        ? `空闲可排: 卡 ${freeIds.join(",")} · ${memUsed.toFixed(0)}/${memTot.toFixed(0)}G`
+        : `全部已占用 · ${memUsed.toFixed(0)}/${memTot.toFixed(0)}G`;
+      $("gpu-summary-pill").textContent = `${gpus.length} 张卡 · ${freeIds.length} 张空闲`;
+    } else {
+      $("kpi-gpu").textContent = "CPU";
+      $("kpi-free").textContent = "未检测到 nvidia-smi";
+      $("gpu-summary-pill").textContent = "无 NVIDIA 显卡";
+    }
+
+    $("kpi-tested").textContent = String(tested.length);
+    $("kpi-test-sets").textContent = `${(d.test_sets || []).length} 个测试集`;
+
+    $("kpi-alert").textContent = String(alerts.length);
+    $("kpi-alert").className = alerts.length ? "kpi-bad" : "kpi-good";
+    $("kpi-alert-sub").textContent = alerts.length ? `${alerts[0].name} 存在异常` : "运行状态平稳";
+
+    paintGpuRack(gpus);
+    paintCategories(d.categories || []);
+  }
+
+  function shortGpuName(name) {
+    return String(name || "").replace(/^NVIDIA\s+/i, "").replace(/GeForce\s+/i, "").replace(/\s+PCIe/i, "").slice(0, 24);
+  }
+
+  function paintGpuRack(gpus) {
+    const panel = $("gpu-panel");
+    const grid = $("gpu-grid");
+    if (!gpus.length) {
+      panel.style.display = "none";
+      return;
+    }
+    panel.style.display = "";
+    grid.innerHTML = gpus.map((g) => {
+      const memPct = g.memory_total ? Math.min(100, Math.round((g.memory_used / g.memory_total) * 100)) : 0;
+      const utilPct = Math.min(100, g.util || 0);
+      const cls = g.free ? "free" : (g.other_users?.length && !g.job_details?.length ? "other" : "");
+      const pwr = g.power_draw != null ? ` · ${g.power_draw}W` : "";
+      const pills = [];
+      for (const jd of g.job_details || []) {
+        const memTxt = jd.mem_mb ? ` ${(jd.mem_mb / 1024).toFixed(1)}G` : "";
+        if (jd.kind === "run") {
+          pills.push(`<button type="button" class="job-chip run" data-open-path="${esc(jd.path)}" data-open-log="${esc(jd.log)}" title="点击查看训练详情">● ${esc(jd.label)}${memTxt}</button>`);
+        } else {
+          pills.push(`<span class="job-chip aux" title="PID ${jd.pid}">${esc(jd.label)}${memTxt}</span>`);
+        }
+      }
+      for (const ou of g.other_users || []) {
+        pills.push(`<span class="job-chip other">他人: ${esc(ou.user)} (${(ou.mem_mb / 1024).toFixed(1)}G)</span>`);
+      }
+      if (g.free) {
+        pills.push(`<span class="job-chip free">✓ 空闲 · 可排卡</span>`);
+      } else if (!pills.length) {
+        pills.push(`<span class="job-chip aux">系统/显存占用</span>`);
+      }
+      return `
+        <div class="gpu-card ${cls}">
+          <div class="gpu-top">
+            <span class="gpu-id">GPU ${g.index}</span>
+            <span class="gpu-model" title="${esc(g.name)}">${esc(shortGpuName(g.name))}</span>
+            <span class="gpu-thermo">${g.temp ?? "–"}°C${pwr}</span>
+          </div>
+          <div class="bar-row">
+            <span class="bar-lbl">算力</span>
+            <div class="bar-track"><div class="bar-fill ${utilPct >= 95 ? "hot" : ""}" style="width:${utilPct}%"></div></div>
+            <span class="bar-num">${utilPct}%</span>
+          </div>
+          <div class="bar-row">
+            <span class="bar-lbl">显存</span>
+            <div class="bar-track"><div class="bar-fill mem ${memPct >= 92 ? "hot" : ""}" style="width:${memPct}%"></div></div>
+            <span class="bar-num">${(g.memory_used / 1024).toFixed(1)}/${(g.memory_total / 1024).toFixed(0)}G</span>
+          </div>
+          <div class="gpu-jobs">${pills.join("")}</div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function paintCategories(cats) {
+    const cluster = $("cat-cluster");
+    const validIds = new Set(cats.map((c) => c.id));
+    if (state.cat !== "all" && !validIds.has(state.cat)) state.cat = "all";
+    const btns = [`<span class="cluster-lbl">类别</span>`, `<button class="seg-btn ${state.cat === "all" ? "active" : ""}" data-cat="all" type="button">全部</button>`];
+    for (const c of cats) {
+      btns.push(`<button class="seg-btn ${state.cat === c.id ? "active" : ""}" data-cat="${esc(c.id)}" type="button">${esc(c.label)}</button>`);
+    }
+    cluster.innerHTML = btns.join("");
+  }
+
+  /* ---------- Smart Anti-Chaos Column Selection & Table Render ---------- */
+  function pickActiveColumns(runs) {
+    const allCols = state.data?.columns || [];
+    const cov = new Map();
+    for (const r of runs) {
+      for (const k of Object.keys(r.latest || {})) {
+        cov.set(k, (cov.get(k) || 0) + 1);
+      }
+    }
+    const present = allCols.filter((c) => (cov.get(c.key) || 0) > 0);
+    present.sort((a, b) => {
+      const sa = a.higher === false ? 1 : 0;
+      const sb = b.higher === false ? 1 : 0;
+      if (sa !== sb) return sa - sb;
+      const ca = cov.get(a.key) || 0;
+      const cb = cov.get(b.key) || 0;
+      if (cb !== ca) return cb - ca;
+      return a.label.localeCompare(b.label);
+    });
+    return { present, cov };
+  }
+
+  function paintTable() {
+    const runs = sortRuns(filteredRuns());
+    const now = state.data?.now || Date.now() / 1000;
+    const thead = $("jobs-head");
+    const tbody = $("jobs-body");
+    const notice = $("hetero-notice");
+
+    if (!runs.length) {
+      notice.classList.add("hidden");
+      thead.innerHTML = "";
+      tbody.innerHTML = `<tr><td class="empty-state">
+        <h3>当前筛选条件下暂无实验</h3>
+        <p>如果你刚在新电脑上启动，请确认已有正在运行的 GPU/Python 训练进程，或在 <code>config.json</code> / <code>--root</code> 中添加实验输出目录。</p>
+      </td></tr>`;
+      return;
+    }
+
+    const visCats = new Set(runs.map((r) => r.category));
+    const { present } = pickActiveColumns(runs);
+
+    // 防乱列机制：在「重点」模式下，如果「全部」包含多类异构实验或指标列过多，自动切为「每条实验独立展示自己的核心指标」，绝不把零碎小实验的指标铺满整张表
+    const useAutoCards = state.mode === "key" && ((state.cat === "all" && visCats.size > 1) || present.length > 8);
+    if (useAutoCards) {
+      notice.classList.remove("hidden");
+      $("hetero-notice-text").textContent = `防乱列保护已生效：当前展示 ${visCats.size} 类不同实验（共 ${present.length} 种指标），已按每条实验自动提取其自身核心指标；切换上方「类别」或点击「展开全部对齐列」可做同列排序。`;
+    } else {
+      notice.classList.add("hidden");
+    }
+
+    if (state.mode === "test") {
+      paintTestModeTable(runs, now, thead, tbody);
+      return;
+    }
+
+    const colsToShow = useAutoCards ? [] : (state.mode === "detail" ? present.slice(0, 12) : present.slice(0, 6));
+
+    // 计算每列在当前可见行中的最优值，用于高亮第一名
+    const colWinners = new Map();
+    for (const c of colsToShow) {
+      let bestV = null;
+      for (const r of runs) {
+        const v = r.best?.[c.key]?.value ?? r.latest?.[c.key];
+        if (typeof v !== "number") continue;
+        if (bestV === null || (c.higher === false ? v < bestV : v > bestV)) bestV = v;
+      }
+      colWinners.set(c.key, bestV);
+    }
+
+    const sortArrow = (k) => state.sortKey === k ? (state.sortDir < 0 ? " ↓" : " ↑") : "";
+    const ths = [
+      `<th style="width:34px;text-align:center;">选</th>`,
+      `<th class="sortable" data-sort="_name">实验 &amp; 备注${sortArrow("_name")}</th>`,
+      `<th>状态 / 卡</th>`,
+      `<th class="sortable" data-sort="_epoch">进度${sortArrow("_epoch")}</th>`,
+    ];
+    if (useAutoCards) {
+      ths.push(`<th>核心指标（按实验自动提取 · 最新 / 最优）</th>`);
+    } else {
+      for (const c of colsToShow) {
+        ths.push(`<th class="num sortable" data-sort="${esc(c.key)}" title="${esc(c.group + " / " + c.label)}">${esc(c.label)}${sortArrow(c.key)}</th>`);
+      }
+      if (!colsToShow.length) {
+        ths.push(`<th>核心指标</th>`);
+      }
+    }
+    ths.push(`<th class="num sortable" data-sort="_updated">更新${sortArrow("_updated")}</th>`);
+    thead.innerHTML = `<tr>${ths.join("")}</tr>`;
+
+    const colSpanTotal = ths.length;
+    const htmlRows = [];
+    for (const r of runs) {
+      const checked = state.selected.has(r.key) ? "checked" : "";
+      const pinned = state.pins.has(r.key);
+      const hasTest = !!(r.tests && r.tests.has_test);
+      const srcBadge = r.source_kind === "console"
+        ? `<span class="src-tag console" title="从控制台日志自动兜底提取">控制台自动</span>`
+        : (r.source_kind ? `<span class="src-tag">${esc(r.source_kind.toUpperCase())}</span>` : "");
+      const catBadge = `<span class="src-tag">${esc(r.category_zh)}</span>`;
+      const noteBtn = r.note
+        ? `<button type="button" class="note-pill" data-note-key="${esc(r.key)}" title="${esc(r.note)}">📝 ${esc(r.note)}</button>`
+        : `<button type="button" class="note-pill empty" data-note-key="${esc(r.key)}">+ 备注</button>`;
+      const addTestBtn = !hasTest
+        ? `<button type="button" class="note-pill empty" data-test-key="${esc(r.key)}">+ Test</button>`
+        : "";
+      const alertEl = r.alert ? `<span class="alert-tag" title="${esc(r.alert)}">⚠ ${esc(r.alert.slice(0, 48))}</span>` : "";
+
+      const progMain = r.total ? `${r.epoch_now || r.epoch_done}/${r.total}` : (r.epoch_done ? `第 ${r.epoch_done} 轮` : (r.batch_pct != null ? `${r.batch_pct}%` : "–"));
+      const progBits = [];
+      if (r.phase) progBits.push(r.phase);
+      if (r.batch_pct != null && r.state === "running") progBits.push(`${r.batch_pct}%`);
+      if (r.remain && r.state === "running") progBits.push(`剩 ${r.remain}`);
+      else if (r.gpu_mem) progBits.push(r.gpu_mem);
+      const pctBar = r.total ? Math.min(100, Math.round(((r.epoch_done || r.epoch_now || 0) / r.total) * 100)) : (r.batch_pct || 0);
+
+      const metricCells = [];
+      if (useAutoCards || !colsToShow.length) {
+        metricCells.push(`<td>${renderAutoSummaryPills(r)}</td>`);
+      } else {
+        let anyHit = false;
+        for (const c of colsToShow) {
+          const lv = r.latest?.[c.key];
+          const bv = r.best?.[c.key];
+          if (lv !== undefined || bv) anyHit = true;
+          const winner = colWinners.get(c.key);
+          const curBest = bv?.value ?? lv;
+          const isWin = winner !== null && curBest !== undefined && Math.abs(curBest - winner) < 1e-9;
+          if (lv === undefined && !bv) {
+            metricCells.push(`<td class="num-cell" style="color:var(--muted);">–</td>`);
+          } else {
+            const sub = bv && bv.epoch ? `优 ${fmtVal(bv.value, c.is_pct)} @${bv.epoch}` : "";
+            metricCells.push(`<td class="num-cell"><span class="num-main ${isWin ? "best-hi" : ""}">${fmtVal(lv ?? bv.value, c.is_pct)}</span>${sub ? `<span class="num-sub">${sub}</span>` : ""}</td>`);
+          }
+        }
+        if (!anyHit && (r.auto_summary || []).length) {
+          metricCells.splice(0, metricCells.length, `<td colspan="${colsToShow.length}">${renderAutoSummaryPills(r)}</td>`);
+        }
+      }
+
+      const devTag = r.device ? `<span class="dev-tag">卡 ${esc(r.device)}</span>` : "";
+      htmlRows.push(`
+        <tr class="run-row ${hasTest ? "has-sub" : ""}">
+          <td style="text-align:center;"><input type="checkbox" data-cmp-key="${esc(r.key)}" ${checked} aria-label="勾选对比 ${esc(r.title)}"></td>
+          <td class="run-cell">
+            <div class="run-head">
+              <button type="button" class="pin-btn ${pinned ? "pinned" : ""}" data-pin-key="${esc(r.key)}" title="${pinned ? "取消置顶" : "置顶实验"}">${pinned ? "★" : "☆"}</button>
+              <button type="button" class="run-link" data-open-key="${esc(r.key)}">${esc(r.title)}</button>
+            </div>
+            <div class="run-meta">${catBadge}${srcBadge}${noteBtn}${addTestBtn}${alertEl}</div>
+          </td>
+          <td style="white-space:nowrap;"><span class="state-pill state-${esc(r.state)}">${esc(r.state_zh)}</span>${devTag}</td>
+          <td class="prog-cell">
+            <div class="prog-main">${esc(progMain)}</div>
+            <div class="prog-sub">${esc(progBits.join(" · ") || "—")}</div>
+            ${pctBar > 0 ? `<div class="prog-bar"><span style="width:${pctBar}%"></span></div>` : ""}
+          </td>
+          ${metricCells.join("")}
+          <td class="num-cell" style="color:var(--muted);font-size:12px;">${fmtAgo(r.updated, now)}</td>
+        </tr>
+      `);
+
+      // 独立 Test 单独一行呈现（不混入 train/val）
+      if (hasTest) {
+        htmlRows.push(renderTestSubrow(r, colSpanTotal));
+      }
+    }
+    tbody.innerHTML = htmlRows.join("");
+  }
+
+  function renderAutoSummaryPills(r) {
+    const items = r.auto_summary || [];
+    if (!items.length) {
+      return `<span style="color:var(--muted);font-size:12px;">${r.state === "running" ? "等待首个指标输出…" : "暂无白名单指标（点标题看日志）"}</span>`;
+    }
+    return `<div class="auto-pills">${items.map((it) => {
+      const bestStr = it.best != null && it.best_ep ? `优 ${fmtVal(it.best, it.is_pct)}@${it.best_ep}` : "";
+      return `<span class="metric-pill"><span class="mlbl">${esc(it.label)}</span><span class="mval">${fmtVal(it.latest, it.is_pct)}</span>${bestStr ? `<span class="mbest">${bestStr}</span>` : ""}</span>`;
+    }).join("")}</div>`;
+  }
+
+  function renderTestSubrow(r, colSpan) {
+    const sets = r.tests?.sets || {};
+    const chips = Object.entries(sets).map(([sn, metrics]) => {
+      const pairs = Object.entries(metrics || {}).slice(0, 3).map(([k, v]) => fmtTestPair(k, v)).join(" · ");
+      return `<span class="test-chip"><strong>${esc(sn)}</strong> ${esc(pairs)}</span>`;
+    }).join("");
+    const meta = [r.tests?.ckpt, r.tests?.source].filter(Boolean).join(" · ");
+    return `
+      <tr class="test-subrow">
+        <td colspan="${colSpan}">
+          <div class="test-sub-inner">
+            <div class="test-sub-left">
+              <span class="test-tag">🧪 独立 Test</span>
+              ${meta ? `<span style="color:var(--muted);font-size:11.5px;">${esc(meta)}</span>` : ""}
+              ${chips}
+            </div>
+            <button type="button" class="btn sm" data-test-key="${esc(r.key)}">编辑 Test</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+
+  function paintTestModeTable(runs, now, thead, tbody) {
+    const testSets = state.data?.test_sets || [];
+    const sortArrow = (k) => state.sortKey === k ? (state.sortDir < 0 ? " ↓" : " ↑") : "";
+    const ths = [
+      `<th style="width:34px;text-align:center;">选</th>`,
+      `<th class="sortable" data-sort="_name">实验 &amp; 备注${sortArrow("_name")}</th>`,
+      `<th>状态 / 卡</th>`,
+      `<th class="test-col">测试权重 / 来源</th>`,
+    ];
+    for (const sn of testSets) {
+      ths.push(`<th class="num sortable test-col" data-sort="test:${esc(sn)}">${esc(sn)}${sortArrow("test:" + sn)}</th>`);
+    }
+    if (!testSets.length) {
+      ths.push(`<th class="test-col">独立测试结果</th>`);
+    }
+    ths.push(`<th style="text-align:right;">操作</th>`);
+    thead.innerHTML = `<tr>${ths.join("")}</tr>`;
+
+    tbody.innerHTML = runs.map((r) => {
+      const checked = state.selected.has(r.key) ? "checked" : "";
+      const pinned = state.pins.has(r.key);
+      const t = r.tests || {};
+      const sets = t.sets || {};
+      const noteBtn = r.note
+        ? `<button type="button" class="note-pill" data-note-key="${esc(r.key)}">📝 ${esc(r.note)}</button>`
+        : `<button type="button" class="note-pill empty" data-note-key="${esc(r.key)}">+ 备注</button>`;
+      const setCells = testSets.length ? testSets.map((sn) => {
+        const sObj = sets[sn];
+        if (!sObj) return `<td class="num-cell" style="color:var(--muted);">–</td>`;
+        const entries = Object.entries(sObj);
+        const first = primaryTestScore(sObj);
+        const rest = entries.filter(([k]) => !first || k !== first.key).slice(0, 2).map(([k, v]) => fmtTestPair(k, v)).join(" · ");
+        return `<td class="num-cell"><span class="num-main best-hi">${first ? esc(fmtTestPair(first.key, first.val)) : "–"}</span>${rest ? `<span class="num-sub">${esc(rest)}</span>` : ""}</td>`;
+      }).join("") : `<td style="color:var(--muted);font-size:12.5px;">尚未采集到 Test，可点右侧录入</td>`;
+
+      const devTag = r.device ? `<span class="dev-tag">卡 ${esc(r.device)}</span>` : "";
+      return `
+        <tr class="run-row">
+          <td style="text-align:center;"><input type="checkbox" data-cmp-key="${esc(r.key)}" ${checked}></td>
+          <td class="run-cell">
+            <div class="run-head">
+              <button type="button" class="pin-btn ${pinned ? "pinned" : ""}" data-pin-key="${esc(r.key)}">${pinned ? "★" : "☆"}</button>
+              <button type="button" class="run-link" data-open-key="${esc(r.key)}">${esc(r.title)}</button>
+            </div>
+            <div class="run-meta"><span class="src-tag">${esc(r.category_zh)}</span>${noteBtn}</div>
+          </td>
+          <td style="white-space:nowrap;"><span class="state-pill state-${esc(r.state)}">${esc(r.state_zh)}</span>${devTag}</td>
+          <td style="font-size:12px;color:var(--ink-soft);">${t.has_test ? `${esc(t.ckpt || "–")}<div style="color:var(--muted);font-size:11px;">${esc(t.source || "")} · ${fmtAgo(t.updated, now)}</div>` : `<span style="color:var(--muted);">未测试</span>`}</td>
+          ${setCells}
+          <td style="text-align:right;white-space:nowrap;"><button type="button" class="btn sm ${t.has_test ? "" : "warn"}" data-test-key="${esc(r.key)}">${t.has_test ? "编辑" : "+ 填测试"}</button></td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  /* ---------- High-Plateau Separated Compare Chart ---------- */
+  async function fetchHistoryFor(run) {
+    const cached = state.histCache.get(run.key);
+    const ttl = run.pid ? 4500 : 45000;
+    if (cached && Date.now() - cached.at < ttl) return cached.data;
+    const qs = new URLSearchParams();
+    if (run.path) qs.set("path", run.path);
+    if (run.log) qs.set("log", run.log);
+    const res = await fetch(`/api/history?${qs.toString()}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    state.histCache.set(run.key, { at: Date.now(), data });
+    return data;
+  }
+
+  async function refreshCompare() {
+    const selKeys = [...state.selected].filter((k) => runByKey(k));
+    const bar = $("compare-bar");
+    const wrap = $("compare-wrap");
+    if (!selKeys.length) {
+      bar.classList.remove("show");
+      wrap.classList.remove("show");
+      return;
+    }
+    bar.classList.add("show");
+    $("cmp-count").textContent = `已选 ${selKeys.length} 条实验`;
+    if (selKeys.length < 2) {
+      wrap.classList.remove("show");
+      return;
+    }
+    wrap.classList.add("show");
+
+    const runs = selKeys.map((k) => runByKey(k)).filter(Boolean);
+    const hists = await Promise.all(runs.map((r) => fetchHistoryFor(r).catch(() => null)));
+    const valid = runs.map((r, i) => ({ run: r, hist: hists[i] })).filter((x) => x.hist && (x.hist.rows || []).length);
+
+    // 动态构建指标下拉框（仅包含已选实验真实拥有的指标）
+    const metricCounts = new Map();
+    const metricMeta = new Map();
+    for (const item of valid) {
+      for (const c of item.hist.columns || []) {
+        metricCounts.set(c.key, (metricCounts.get(c.key) || 0) + 1);
+        if (!metricMeta.has(c.key)) metricMeta.set(c.key, c);
+      }
+    }
+    const sortedMetrics = [...metricMeta.values()].sort((a, b) => {
+      const ca = metricCounts.get(a.key) || 0;
+      const cb = metricCounts.get(b.key) || 0;
+      if (cb !== ca) return cb - ca;
+      const ha = a.higher === false ? 1 : 0;
+      const hb = b.higher === false ? 1 : 0;
+      if (ha !== hb) return ha - hb;
+      return a.label.localeCompare(b.label);
+    });
+
+    const sel = $("cmp-metric");
+    if (state.cmpMetric !== "auto" && !metricMeta.has(state.cmpMetric)) {
+      state.cmpMetric = sortedMetrics.length ? sortedMetrics[0].key : "auto";
+    }
+    const opts = [`<option value="auto">自动首选指标（兼容异构对比）</option>`];
+    for (const m of sortedMetrics) {
+      opts.push(`<option value="${esc(m.key)}">${esc(m.group)} · ${esc(m.label)} (${metricCounts.get(m.key)}/${valid.length})</option>`);
+    }
+    sel.innerHTML = opts.join("");
+    sel.value = state.cmpMetric;
+
+    paintCompareChart(valid, metricMeta);
+  }
+
+  function smoothSeries(pts, win) {
+    if (win <= 1 || pts.length <= 2) return pts;
+    const half = Math.floor(win / 2);
+    return pts.map((p, i) => {
+      let sum = 0, cnt = 0;
+      for (let j = Math.max(0, i - half); j <= Math.min(pts.length - 1, i + half); j++) {
+        sum += pts[j].y;
+        cnt++;
+      }
+      return { x: p.x, y: sum / cnt, rawY: p.y };
+    });
+  }
+
+  function paintCompareChart(valid, metricMeta) {
+    const svg = $("cmp-svg");
+    const legendEl = $("cmp-legend");
+    const rankEl = $("cmp-rank");
+    const tip = $("cmp-tip");
+
+    const seriesList = [];
+    let globalHigher = true;
+    let globalPct = false;
+    if (state.cmpMetric !== "auto" && metricMeta.has(state.cmpMetric)) {
+      const mm = metricMeta.get(state.cmpMetric);
+      globalHigher = mm.higher !== false;
+      globalPct = !!mm.is_pct;
+    }
+
+    valid.forEach((item, idx) => {
+      const cols = item.hist.columns || [];
+      let chosenCol = null;
+      if (state.cmpMetric === "auto") {
+        chosenCol = cols.find((c) => c.higher !== false) || cols[0];
+      } else {
+        chosenCol = cols.find((c) => c.key === state.cmpMetric);
+      }
+      if (!chosenCol) return;
+      const isPct = state.cmpMetric === "auto" ? !!chosenCol.is_pct : globalPct;
+      if (state.cmpMetric === "auto" && idx === 0) {
+        globalHigher = chosenCol.higher !== false;
+        globalPct = isPct;
+      }
+      const rawPts = [];
+      for (const row of item.hist.rows || []) {
+        const v = row[chosenCol.key];
+        if (typeof v !== "number" || Number.isNaN(v)) continue;
+        const scaled = (isPct && v >= 0 && v <= 1.0001) ? v * 100 : v;
+        rawPts.push({ x: Number(row.epoch), y: scaled });
+      }
+      if (!rawPts.length) return;
+      seriesList.push({
+        key: item.run.key,
+        name: item.run.title,
+        note: item.run.note || "",
+        color: PALETTE[idx % PALETTE.length],
+        colLabel: chosenCol.label,
+        isPct,
+        higher: chosenCol.higher !== false,
+        rawPts,
+        tests: item.run.tests,
+      });
+    });
+
+    if (!seriesList.length) {
+      svg.innerHTML = `<text x="560" y="178" text-anchor="middle" fill="#586a75" font-size="14">所选实验在该指标下暂无曲线数据，请切换「对比指标」下拉选项。</text>`;
+      legendEl.innerHTML = "";
+      rankEl.innerHTML = "";
+      return;
+    }
+
+    const activeSeries = seriesList.filter((s) => !state.hiddenCurves.has(s.key));
+    const drawList = activeSeries.length ? activeSeries : seriesList;
+
+    // 决定 X 轴起点（跳过热身爬坡期，避免前期低值把高段压成一条直线）
+    const maxXAll = Math.max(...drawList.flatMap((s) => s.rawPts.map((p) => p.x)));
+    const minXAll = Math.min(...drawList.flatMap((s) => s.rawPts.map((p) => p.x)));
+    let minXCut = minXAll;
+    if (state.cmpXStart === "skip") {
+      minXCut = maxXAll >= 12 ? Math.max(minXAll, Math.round(maxXAll * 0.15)) : minXAll;
+    } else if (state.cmpXStart === "tail50") {
+      minXCut = Math.max(minXAll, maxXAll - 50);
+    } else {
+      minXCut = Math.max(minXAll, Number(state.cmpXStart) || 0);
+    }
+
+    // 计算平滑曲线 + 可选 Δ 相对均值模式
+    const processed = drawList.map((s) => {
+      const sm = smoothSeries(s.rawPts, state.cmpSmooth);
+      const vis = sm.filter((p) => p.x >= minXCut);
+      return { ...s, pts: vis.length >= 2 ? vis : sm };
+    });
+
+    if (state.cmpYMode === "delta" && processed.length >= 2) {
+      const meanByX = new Map();
+      for (const s of processed) {
+        for (const p of s.pts) {
+          const cur = meanByX.get(p.x) || { sum: 0, cnt: 0 };
+          cur.sum += p.y;
+          cur.cnt += 1;
+          meanByX.set(p.x, cur);
+        }
+      }
+      for (const s of processed) {
+        s.pts = s.pts.map((p) => {
+          const m = meanByX.get(p.x);
+          const avg = m ? m.sum / m.cnt : p.y;
+          return { x: p.x, y: p.y - avg, absY: p.y };
+        });
+      }
+    }
+
+    const xs = processed.flatMap((s) => s.pts.map((p) => p.x));
+    const ys = processed.flatMap((s) => s.pts.map((p) => p.y)).sort((a, b) => a - b);
+    const xMin = Math.min(...xs);
+    const xMax = Math.max(...xs) === xMin ? xMin + 1 : Math.max(...xs);
+
+    let yMin = ys[0];
+    let yMax = ys[ys.length - 1];
+    if (state.cmpYMode === "focus" && ys.length >= 10) {
+      if (globalHigher) {
+        yMin = ys[Math.floor(ys.length * 0.14)];
+      } else {
+        yMax = ys[Math.floor(ys.length * 0.86)];
+      }
+    }
+    const span = Math.max(1e-6, yMax - yMin);
+    yMin -= span * 0.1;
+    yMax += span * 0.1;
+
+    const W = 1120, H = 356;
+    const pad = { l: 64, r: 175, t: 20, b: 36 };
+    const pw = W - pad.l - pad.r;
+    const ph = H - pad.t - pad.b;
+    const sx = (x) => pad.l + ((x - xMin) / (xMax - xMin)) * pw;
+    const sy = (y) => pad.t + ph - ((y - yMin) / (yMax - yMin)) * ph;
+
+    const gridLines = [];
+    for (let i = 0; i <= 5; i++) {
+      const val = yMin + (i / 5) * (yMax - yMin);
+      const py = sy(val);
+      const lbl = state.cmpYMode === "delta"
+        ? (val > 0 ? "+" : "") + val.toFixed(2) + (globalPct ? "%" : "")
+        : val.toFixed(globalPct ? 2 : (Math.abs(val) >= 10 ? 2 : 3)) + (globalPct ? "%" : "");
+      gridLines.push(`<line x1="${pad.l}" y1="${py.toFixed(1)}" x2="${W - pad.r}" y2="${py.toFixed(1)}" stroke="#dde7ec" stroke-dasharray="3 4"/>`);
+      gridLines.push(`<text x="${pad.l - 8}" y="${(py + 4).toFixed(1)}" text-anchor="end" fill="#586a75" font-size="11.5" font-family="JetBrains Mono,monospace">${esc(lbl)}</text>`);
+    }
+    if (state.cmpYMode === "delta" && yMin < 0 && yMax > 0) {
+      const zy = sy(0);
+      gridLines.push(`<line x1="${pad.l}" y1="${zy.toFixed(1)}" x2="${W - pad.r}" y2="${zy.toFixed(1)}" stroke="#8a5610" stroke-width="1.3" stroke-dasharray="5 4"/>`);
+    }
+
+    const xTicks = [];
+    for (let i = 0; i <= 6; i++) {
+      const xv = Math.round(xMin + (i / 6) * (xMax - xMin));
+      const px = sx(xv);
+      xTicks.push(`<text x="${px.toFixed(1)}" y="${H - 12}" text-anchor="middle" fill="#586a75" font-size="11.5" font-family="JetBrains Mono,monospace">${xv}</text>`);
+    }
+
+    // 曲线 + 右侧防重叠直标标签
+    const paths = [];
+    const endLabels = [];
+    for (const s of processed) {
+      const isHover = state.hoverCurve && state.hoverCurve !== s.key;
+      const d = s.pts.map((p, i) => `${i === 0 ? "M" : "L"}${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join(" ");
+      paths.push(`<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${state.hoverCurve === s.key ? 3.2 : 2.1}" stroke-opacity="${isHover ? 0.16 : 0.94}" stroke-linejoin="round" stroke-linecap="round"/>`);
+      const last = s.pts[s.pts.length - 1];
+      const ly = Math.max(pad.t + 8, Math.min(H - pad.b - 6, sy(last.y)));
+      endLabels.push({ s, lx: sx(last.x), ly, val: last.y, rawLast: last.absY ?? last.y });
+    }
+
+    // 右侧标签防重叠排布
+    endLabels.sort((a, b) => a.ly - b.ly);
+    for (let i = 1; i < endLabels.length; i++) {
+      if (endLabels[i].ly - endLabels[i - 1].ly < 16) {
+        endLabels[i].ly = Math.min(H - pad.b - 4, endLabels[i - 1].ly + 16);
+      }
+    }
+    const labelSvg = endLabels.map((item) => {
+      const valTxt = state.cmpYMode === "delta"
+        ? (item.val > 0 ? "+" : "") + item.val.toFixed(2)
+        : item.val.toFixed(item.s.isPct ? 2 : 3) + (item.s.isPct ? "%" : "");
+      const shortN = item.s.name.length > 14 ? item.s.name.slice(0, 13) + "…" : item.s.name;
+      const op = state.hoverCurve && state.hoverCurve !== item.s.key ? 0.25 : 1;
+      return `
+        <g opacity="${op}">
+          <circle cx="${item.lx.toFixed(1)}" cy="${Math.max(pad.t, Math.min(H - pad.b, sy(item.val))).toFixed(1)}" r="3.4" fill="${item.s.color}"/>
+          <text x="${W - pad.r + 8}" y="${(item.ly + 4).toFixed(1)}" fill="${item.s.color}" font-size="11.5" font-weight="700" font-family="JetBrains Mono,monospace">${esc(valTxt)} <tspan fill="#2c3d47" font-family="Figtree,sans-serif" font-weight="600">${esc(shortN)}</tspan></text>
+        </g>
+      `;
+    }).join("");
+
+    svg.innerHTML = `
+      <defs><clipPath id="cmp-clip"><rect x="${pad.l}" y="${pad.t}" width="${pw}" height="${ph}"/></clipPath></defs>
+      ${gridLines.join("")}
+      <g clip-path="url(#cmp-clip)">${paths.join("")}</g>
+      ${labelSvg}
+      ${xTicks.join("")}
+      <line id="cmp-xhair" x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${H - pad.b}" stroke="#0d6b65" stroke-width="1" stroke-dasharray="3 3" visibility="hidden"/>
+      <rect id="cmp-hit" x="${pad.l}" y="${pad.t}" width="${pw}" height="${ph}" fill="transparent" style="cursor:crosshair;"/>
+    `;
+
+    // 交互十字准线
+    const hit = svg.querySelector("#cmp-hit");
+    const xhair = svg.querySelector("#cmp-xhair");
+    hit.onmousemove = (ev) => {
+      const rect = svg.getBoundingClientRect();
+      const relX = ((ev.clientX - rect.left) / rect.width) * W;
+      const xVal = xMin + ((relX - pad.l) / pw) * (xMax - xMin);
+      xhair.setAttribute("x1", relX.toFixed(1));
+      xhair.setAttribute("x2", relX.toFixed(1));
+      xhair.setAttribute("visibility", "visible");
+
+      const lines = [];
+      for (const s of processed) {
+        let bestP = s.pts[0];
+        let bestD = Math.abs(bestP.x - xVal);
+        for (const p of s.pts) {
+          const d = Math.abs(p.x - xVal);
+          if (d < bestD) { bestD = d; bestP = p; }
+        }
+        const vStr = state.cmpYMode === "delta"
+          ? `${bestP.y >= 0 ? "+" : ""}${bestP.y.toFixed(3)} (实值 ${bestP.absY.toFixed(3)})`
+          : bestP.y.toFixed(s.isPct ? 2 : 4) + (s.isPct ? "%" : "");
+        lines.push(`<div><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${s.color};margin-right:6px;"></span><strong>${esc(s.name)}</strong>: ${esc(vStr)} <span style="opacity:.7">@${bestP.x}</span></div>`);
+      }
+      tip.innerHTML = `<div style="font-weight:700;margin-bottom:3px;border-bottom:1px solid rgba(255,255,255,.16);padding-bottom:2px;">步 / 轮 ≈ ${Math.round(xVal)}</div>` + lines.join("");
+      tip.style.display = "block";
+      const fx = ev.clientX - rect.left;
+      const fy = ev.clientY - rect.top;
+      tip.style.left = (fx > rect.width * 0.62 ? Math.max(8, fx - 270) : fx + 14) + "px";
+      tip.style.top = Math.max(8, Math.min(rect.height - 110, fy - 12)) + "px";
+    };
+    hit.onmouseleave = () => {
+      xhair.setAttribute("visibility", "hidden");
+      tip.style.display = "none";
+    };
+
+    // 图例（悬停聚焦、点击隐藏离群线）
+    legendEl.innerHTML = seriesList.map((s) => {
+      const dim = state.hiddenCurves.has(s.key) ? "dim" : "";
+      return `<button type="button" class="legend-pill ${dim}" data-leg-key="${esc(s.key)}" title="悬停突出显示，点击隐藏/恢复此曲线">
+        <span class="legend-dot" style="background:${s.color}"></span>
+        <span>${esc(s.name)}</span>
+        <span style="color:var(--muted);font-size:11px;">(${esc(s.colLabel)})</span>
+      </button>`;
+    }).join("");
+    legendEl.querySelectorAll(".legend-pill").forEach((btn) => {
+      const k = btn.dataset.legKey;
+      btn.onmouseenter = () => { state.hoverCurve = k; paintCompareChart(valid, metricMeta); };
+      btn.onmouseleave = () => { state.hoverCurve = null; paintCompareChart(valid, metricMeta); };
+      btn.onclick = () => {
+        if (state.hiddenCurves.has(k)) state.hiddenCurves.delete(k);
+        else state.hiddenCurves.add(k);
+        paintCompareChart(valid, metricMeta);
+      };
+    });
+
+    // 排序数值汇总表（一眼看出毫厘之差）
+    const stats = seriesList.map((s) => {
+      const pts = s.rawPts;
+      const last = pts[pts.length - 1];
+      let bestP = pts[0];
+      for (const p of pts) {
+        if (s.higher ? p.y > bestP.y : p.y < bestP.y) bestP = p;
+      }
+      const tail5 = pts.slice(-5);
+      const avg5 = tail5.reduce((a, p) => a + p.y, 0) / tail5.length;
+      return { ...s, last, bestP, avg5 };
+    });
+    stats.sort((a, b) => a.higher ? (b.bestP.y - a.bestP.y) : (a.bestP.y - b.bestP.y));
+    const topVal = stats[0]?.bestP.y;
+
+    rankEl.innerHTML = `
+      <table class="mini-table">
+        <thead>
+          <tr>
+            <th>排名</th>
+            <th>实验 &amp; 备注</th>
+            <th>指标</th>
+            <th class="num">最优值 (@轮次)</th>
+            <th class="num">相对 #1 差值 Δ</th>
+            <th class="num">最新值</th>
+            <th class="num">末 5 轮均值</th>
+            <th>独立 Test 摘要</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${stats.map((st, idx) => {
+            const diff = idx === 0 ? 0 : (st.bestP.y - topVal);
+            const diffTxt = idx === 0 ? "基准 #1" : ((diff > 0 ? "+" : "") + diff.toFixed(st.isPct ? 2 : 4) + (st.isPct ? "%" : ""));
+            const testSummary = st.tests?.has_test
+              ? Object.entries(st.tests.sets || {}).slice(0, 2).map(([sn, mv]) => {
+                  const p = primaryTestScore(mv);
+                  return p ? `${sn}: ${fmtTestPair(p.key, p.val)}` : sn;
+                }).join(" · ")
+              : "–";
+            const suf = st.isPct ? "%" : "";
+            const dec = st.isPct ? 2 : 4;
+            return `<tr>
+              <td><span class="legend-dot" style="background:${st.color};display:inline-block;vertical-align:middle;margin-right:5px;"></span>#${idx + 1}</td>
+              <td><strong>${esc(st.name)}</strong>${st.note ? ` <span style="color:var(--warn);font-size:11.5px;">📝 ${esc(st.note)}</span>` : ""}</td>
+              <td style="color:var(--muted);">${esc(st.colLabel)}</td>
+              <td class="num" style="font-weight:700;color:var(--teal);">${st.bestP.y.toFixed(dec)}${suf} <span style="color:var(--muted);font-weight:500;">@${st.bestP.x}</span></td>
+              <td class="num" style="color:${idx === 0 ? "var(--teal)" : "var(--copper)"};">${esc(diffTxt)}</td>
+              <td class="num">${st.last.y.toFixed(dec)}${suf}</td>
+              <td class="num">${st.avg5.toFixed(dec)}${suf}</td>
+              <td style="font-size:12px;color:var(--test-ink);">${esc(testSummary)}</td>
+            </tr>`;
+          }).join("")}
+        </tbody>
+      </table>
+    `;
+  }
+
+  /* ---------- Detail Drawer ---------- */
+  async function openDrawerByRun(run) {
+    if (!run) return;
+    openDrawer(run.key, run.path || "", run.log || "");
+  }
+
+  async function openDrawer(key, path, log) {
+    state.drawerKey = key || path || log;
+    state.drawerPath = path || "";
+    state.drawerLog = log || "";
+    state.drawerLogLines = 120;
+    $("drawer-backdrop").classList.add("open");
+    $("drawer").classList.add("open");
+    $("dr-title").textContent = "加载中…";
+    $("dr-charts").innerHTML = `<div style="color:var(--muted);font-size:12.5px;">读取指标历史中…</div>`;
+    $("dr-log-box").textContent = "加载终端日志中…";
+
+    const qs = new URLSearchParams();
+    if (path) qs.set("path", path);
+    if (log) qs.set("log", log);
+    try {
+      const res = await fetch(`/api/history?${qs.toString()}`);
+      if (!res.ok) throw new Error("未找到实验数据");
+      const h = await res.json();
+      state.drawerData = h;
+      state.drawerKey = h.key;
+      paintDrawer(h);
+      loadDrawerLog();
+    } catch (err) {
+      $("dr-title").textContent = "无法读取该实验";
+      $("dr-charts").innerHTML = `<div style="color:var(--bad);">${esc(err.message)}</div>`;
+      loadDrawerLog();
+    }
+  }
+
+  function closeDrawer() {
+    $("drawer-backdrop").classList.remove("open");
+    $("drawer").classList.remove("open");
+    state.drawerKey = null;
+  }
+
+  function paintDrawer(h) {
+    $("dr-title").textContent = h.title || h.name;
+    const catMap = { detection: "检测", seg_vis: "分割/视觉", cls_nlp: "分类/NLP/LLM", general: "通用/其他" };
+    $("dr-cat").textContent = catMap[h.category] || h.category || "通用";
+    $("dr-src").textContent = h.source_kind ? `来源: ${h.source_kind.toUpperCase()}` : "无结构化指标";
+    $("dr-path").textContent = h.path || h.log || "–";
+    $("dr-note-ta").value = h.note || "";
+
+    // Test card
+    const t = h.tests || {};
+    if (t.has_test) {
+      const chips = Object.entries(t.sets || {}).map(([sn, mv]) => {
+        const pairs = Object.entries(mv || {}).map(([k, v]) => fmtTestPair(k, v)).join(" · ");
+        return `<div class="test-chip" style="margin:0 6px 6px 0;"><strong>${esc(sn)}</strong> ${esc(pairs)}</div>`;
+      }).join("");
+      $("dr-test-body").innerHTML = `
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">权重: <strong>${esc(t.ckpt || "–")}</strong> · 来源: ${esc(t.source || "–")}</div>
+        <div>${chips}</div>
+      `;
+    } else {
+      $("dr-test-body").innerHTML = `<span style="color:var(--muted);">暂无独立测试结果。可在测试脚本输出 <code>eval_best.json</code> / 控制台打印 <code>[Test] acc=92.5</code>，或点击右上角手动录入。</span>`;
+    }
+
+    paintDrawerCharts(h);
+
+    // Images
+    const imgs = h.images || [];
+    if (imgs.length && h.path) {
+      $("dr-img-card").style.display = "";
+      $("dr-img-grid").innerHTML = imgs.map((nm) => {
+        const url = `/img?path=${encodeURIComponent(h.path)}&name=${encodeURIComponent(nm)}`;
+        return `<div class="img-thumb" data-zoom="${esc(url)}"><img src="${esc(url)}" loading="lazy" alt="${esc(nm)}"><span>${esc(nm)}</span></div>`;
+      }).join("");
+    } else {
+      $("dr-img-card").style.display = "none";
+    }
+
+    // Epoch table
+    const rows = (h.rows || []).slice(-60).reverse();
+    const cols = (h.columns || []).slice(0, 8);
+    if (rows.length && cols.length) {
+      $("dr-hist-card").style.display = "";
+      $("dr-hist-wrap").innerHTML = `
+        <table class="mini-table">
+          <thead><tr><th>${h.x_axis === "step" ? "Step" : "Epoch"}</th>${cols.map((c) => `<th class="num">${esc(c.label)}</th>`).join("")}</tr></thead>
+          <tbody>
+            ${rows.map((row) => `<tr><td>${row.epoch}</td>${cols.map((c) => `<td class="num">${fmtVal(row[c.key], c.is_pct)}</td>`).join("")}</tr>`).join("")}
+          </tbody>
+        </table>
+      `;
+    } else {
+      $("dr-hist-card").style.display = "none";
+    }
+  }
+
+  function paintDrawerCharts(h) {
+    const box = $("dr-charts");
+    const rows = h.rows || [];
+    const cols = h.columns || [];
+    if (!rows.length || !cols.length) {
+      box.innerHTML = `<div style="color:var(--muted);font-size:12.5px;">暂无可绘制曲线的数据点（可在下方终端日志查看实时输出）。</div>`;
+      return;
+    }
+    const focus = $("dr-focus-chk").checked;
+    const scoreCols = cols.filter((c) => c.higher !== false).slice(0, 5);
+    const lossCols = cols.filter((c) => c.higher === false).slice(0, 5);
+    const parts = [];
+    if (scoreCols.length) parts.push(renderSingleSvgChart("评估 / 得分指标（越高越好）", rows, scoreCols, focus, true));
+    if (lossCols.length) parts.push(renderSingleSvgChart("损失 / 误差指标（越低越好）", rows, lossCols, focus, false));
+    box.innerHTML = parts.join("");
+  }
+
+  function renderSingleSvgChart(title, rows, cols, focus, higher) {
+    const series = cols.map((c, i) => ({
+      col: c,
+      color: PALETTE[i % PALETTE.length],
+      pts: rows.map((r) => {
+        const v = r[c.key];
+        if (typeof v !== "number") return null;
+        const scaled = (c.is_pct && v >= 0 && v <= 1.0001) ? v * 100 : v;
+        return { x: Number(r.epoch), y: scaled };
+      }).filter(Boolean),
+    })).filter((s) => s.pts.length);
+    if (!series.length) return "";
+
+    const xs = series.flatMap((s) => s.pts.map((p) => p.x));
+    const ys = series.flatMap((s) => s.pts.map((p) => p.y)).sort((a, b) => a - b);
+    const xMin = Math.min(...xs), xMax = Math.max(...xs) === xMin ? xMin + 1 : Math.max(...xs);
+    let yMin = ys[0], yMax = ys[ys.length - 1];
+    if (focus && ys.length >= 10) {
+      if (higher) yMin = ys[Math.floor(ys.length * 0.14)];
+      else yMax = ys[Math.floor(ys.length * 0.86)];
+    }
+    const sp = Math.max(1e-6, yMax - yMin);
+    yMin -= sp * 0.1; yMax += sp * 0.1;
+
+    const W = 680, H = 210, pad = { l: 54, r: 16, t: 14, b: 26 };
+    const pw = W - pad.l - pad.r, ph = H - pad.t - pad.b;
+    const sx = (x) => pad.l + ((x - xMin) / (xMax - xMin)) * pw;
+    const sy = (y) => pad.t + ph - ((y - yMin) / (yMax - yMin)) * ph;
+
+    const grids = [0, 0.25, 0.5, 0.75, 1].map((t) => {
+      const v = yMin + t * (yMax - yMin);
+      const py = sy(v);
+      return `<line x1="${pad.l}" y1="${py.toFixed(1)}" x2="${W - pad.r}" y2="${py.toFixed(1)}" stroke="#dde7ec" stroke-dasharray="3 3"/>
+              <text x="${pad.l - 6}" y="${(py + 3.5).toFixed(1)}" text-anchor="end" fill="#586a75" font-size="10.5" font-family="JetBrains Mono,monospace">${v.toFixed(Math.abs(v) >= 10 ? 1 : 3)}</text>`;
+    }).join("");
+    const paths = series.map((s) => {
+      const d = s.pts.map((p, i) => `${i === 0 ? "M" : "L"}${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join(" ");
+      return `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round"/>`;
+    }).join("");
+    const cid = "dc_" + Math.random().toString(36).slice(2, 8);
+    const leg = series.map((s) => {
+      const last = s.pts[s.pts.length - 1];
+      return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;margin-right:10px;"><span class="legend-dot" style="background:${s.color};width:8px;height:8px;"></span>${esc(s.col.label)}: <strong>${last.y.toFixed(s.col.is_pct ? 2 : 4)}${s.col.is_pct ? "%" : ""}</strong></span>`;
+    }).join("");
+
+    return `
+      <div style="margin-bottom:12px;">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px;">${esc(title)}</div>
+        <div style="background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:6px;">
+          <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;">
+            <defs><clipPath id="${cid}"><rect x="${pad.l}" y="${pad.t}" width="${pw}" height="${ph}"/></clipPath></defs>
+            ${grids}
+            <g clip-path="url(#${cid})">${paths}</g>
+            <text x="${pad.l}" y="${H - 6}" fill="#586a75" font-size="10.5" font-family="JetBrains Mono,monospace">${xMin}</text>
+            <text x="${W - pad.r}" y="${H - 6}" text-anchor="end" fill="#586a75" font-size="10.5" font-family="JetBrains Mono,monospace">${xMax}</text>
+          </svg>
+          <div style="padding:4px 6px 2px;display:flex;flex-wrap:wrap;gap:4px;">${leg}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  async function loadDrawerLog(customLogPath) {
+    const box = $("dr-log-box");
+    const qs = new URLSearchParams();
+    if (state.drawerPath) qs.set("path", state.drawerPath);
+    if (customLogPath || state.drawerLog) qs.set("log", customLogPath || state.drawerLog);
+    qs.set("lines", String(state.drawerLogLines));
+    try {
+      const res = await fetch(`/api/log?${qs.toString()}`);
+      if (!res.ok) {
+        box.textContent = "未找到对应的终端日志文件（若使用重定向，建议用 python train.py 2>&1 | tee train.log）。";
+        $("dr-log-select").style.display = "none";
+        return;
+      }
+      const d = await res.json();
+      const sel = $("dr-log-select");
+      if ((d.available || []).length > 1) {
+        sel.style.display = "";
+        sel.innerHTML = d.available.map((a) => `<option value="${esc(a.path)}" ${a.path === d.log_path ? "selected" : ""}>${esc(a.name)}</option>`).join("");
+      } else {
+        sel.style.display = "none";
+      }
+      box.innerHTML = (d.lines || []).map((ln) => {
+        const isErr = /Traceback|Error:|Exception:|CUDA out of memory|OutOfMemory/i.test(ln);
+        return isErr ? `<span class="log-err">${esc(ln)}</span>` : esc(ln);
+      }).join("\n") || "(日志为空)";
+      box.scrollTop = box.scrollHeight;
+    } catch {
+      box.textContent = "日志加载失败。";
+    }
+  }
+
+  /* ---------- Modals: Note & Universal Test ---------- */
+  function openNoteModal(key) {
+    const run = runByKey(key);
+    state.noteTargetKey = key;
+    $("nm-run-name").textContent = run ? run.title : key;
+    $("nm-ta").value = run?.note || "";
+    $("note-modal").classList.add("open");
+    setTimeout(() => $("nm-ta").focus(), 40);
+  }
+
+  async function persistNote(key, text) {
+    const res = await fetch("/api/note", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key, note: text }),
+    });
+    if (!res.ok) throw new Error("保存失败");
+    toast(text.trim() ? "已保存实验备注" : "已清空实验备注");
+    await tick(true);
+  }
+
+  function addTestEditorRow(setName = "", metricText = "") {
+    const row = document.createElement("div");
+    row.className = "test-edit-row";
+    row.innerHTML = `
+      <input class="inp tm-sn" placeholder="测试集名 (如 Test)" value="${esc(setName)}">
+      <input class="inp tm-mv" placeholder="指标 (如 acc=92.5, f1=91.2)" value="${esc(metricText)}">
+      <button type="button" class="btn sm" title="删除此行" style="padding:4px 7px;">✕</button>
+    `;
+    row.querySelector("button").onclick = () => row.remove();
+    $("tm-rows").appendChild(row);
+  }
+
+  function openTestModal(key) {
+    const run = runByKey(key) || state.drawerData;
+    state.testTargetKey = key;
+    $("tm-run-name").textContent = run?.title || key;
+    const t = run?.tests || {};
+    $("tm-ckpt").value = t.ckpt || "";
+    const box = $("tm-rows");
+    box.innerHTML = "";
+    const entries = Object.entries(t.sets || {});
+    if (entries.length) {
+      for (const [sn, mv] of entries) {
+        const txt = Object.entries(mv || {}).map(([k, v]) => `${k}=${v}`).join(", ");
+        addTestEditorRow(sn, txt);
+      }
+    } else {
+      addTestEditorRow("Test", "");
+      addTestEditorRow("", "");
+    }
+    $("test-modal").classList.add("open");
+  }
+
+  function parseMetricsInput(raw) {
+    const out = {};
+    const txt = String(raw || "").trim();
+    if (!txt) return out;
+    if (/^[+-]?\d+(?:\.\d+)?%?$/.test(txt)) {
+      out.score = parseFloat(txt);
+      return out;
+    }
+    for (const part of txt.split(/[,;，；\n]+/)) {
+      const seg = part.trim();
+      if (!seg) continue;
+      const m = seg.match(/^([^:=]+?)\s*[:=]\s*([+-]?\d+(?:\.\d+)?)\s*%?$/);
+      if (m) {
+        out[m[1].trim()] = parseFloat(m[2]);
+      }
+    }
+    return out;
+  }
+
+  async function saveTestModal(clearAll = false) {
+    const key = state.testTargetKey;
+    if (!key) return;
+    let body;
+    if (clearAll) {
+      body = { key, clear: true };
+    } else {
+      const sets = {};
+      $("tm-rows").querySelectorAll(".test-edit-row").forEach((r) => {
+        const sn = r.querySelector(".tm-sn").value.trim();
+        const mv = parseMetricsInput(r.querySelector(".tm-mv").value);
+        if (sn && Object.keys(mv).length) sets[sn] = mv;
+      });
+      body = { key, ckpt: $("tm-ckpt").value.trim(), sets };
+    }
+    const res = await fetch("/api/test_result", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) { toast("保存 Test 失败"); return; }
+    $("test-modal").classList.remove("open");
+    toast(clearAll ? "已清空手动 Test 录入" : "已保存独立 Test 结果");
+    state.histCache.delete(key);
+    await tick(true);
+    if (state.drawerKey === key) openDrawer(key, state.drawerPath, state.drawerLog);
+  }
+
+  /* ---------- Markdown Export & Finish Notifications ---------- */
+  function exportMarkdown() {
+    const runs = sortRuns(filteredRuns());
+    if (!runs.length) { toast("当前无可见实验可导出"); return; }
+    const lines = ["| 实验 | 类别 | 状态 | 进度 | 核心指标 | 独立 Test | 备注 |", "|---|---|---|---|---|---|---|"];
+    for (const r of runs) {
+      const prog = r.total ? `${r.epoch_done}/${r.total}` : `${r.epoch_done || 0}轮`;
+      const mets = (r.auto_summary || []).map((m) => `${m.label}=${fmtVal(m.latest, m.is_pct)}`).join(", ") || "–";
+      const tst = r.tests?.has_test
+        ? Object.entries(r.tests.sets || {}).map(([sn, mv]) => `${sn}: ${Object.entries(mv).slice(0, 2).map(([k, v]) => fmtTestPair(k, v)).join("/")}`).join("; ")
+        : "–";
+      lines.push(`| ${r.title.replace(/\|/g, "/")} | ${r.category_zh} | ${r.state_zh} | ${prog} | ${mets} | ${tst} | ${(r.note || "").replace(/\|/g, "/")} |`);
+    }
+    navigator.clipboard?.writeText(lines.join("\n"))
+      .then(() => toast(`已复制 ${runs.length} 条实验 Markdown 汇总表`))
+      .catch(() => toast("浏览器未授权剪贴板写入"));
+  }
+
+  function checkFinishNotify(runs) {
+    const nowRun = new Set(runs.filter((r) => r.pid || r.state === "running").map((r) => r.key));
+    if (state.notifyOn && state.prevRunning.size) {
+      for (const k of state.prevRunning) {
+        if (!nowRun.has(k)) {
+          const r = runs.find((x) => x.key === k);
+          if (r && "Notification" in window && Notification.permission === "granted") {
+            new Notification(`实验状态变更: ${r.title}`, { body: `当前状态: ${r.state_zh} · 进度 ${r.epoch_done}${r.total ? "/" + r.total : ""}` });
+          }
+        }
+      }
+    }
+    state.prevRunning = nowRun;
+  }
+
+  /* ---------- Polling Loop ---------- */
+  async function tick(force = false) {
+    if (state.paused && !force) return;
+    try {
+      const res = await fetch("/api/board", { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      state.data = await res.json();
+      checkFinishNotify(state.data.runs || []);
+      const t = new Date((state.data.now || Date.now() / 1000) * 1000);
+      $("stamp").textContent = `已同步 ${t.toTimeString().slice(0, 8)}`;
+      $("stamp").classList.remove("err");
+      $("pulse-dot").className = state.paused ? "pulse-dot paused" : "pulse-dot";
+      paintHeaderAndKpi();
+      paintTable();
+      if (state.selected.size >= 2) refreshCompare();
+      else {
+        $("compare-bar").classList.toggle("show", state.selected.size > 0);
+        $("cmp-count").textContent = `已选 ${state.selected.size} 条实验`;
+        $("compare-wrap").classList.remove("show");
+      }
+    } catch (err) {
+      $("stamp").textContent = `断开 (${err.message})`;
+      $("stamp").classList.add("err");
+      $("pulse-dot").className = "pulse-dot err";
+    }
+  }
+
+  /* ---------- Event Binding ---------- */
+  function bindEvents() {
+    // Quick tags in drawer & note modal
+    for (const [cid, taId] of [["dr-quick-tags", "dr-note-ta"], ["nm-tags", "nm-ta"]]) {
+      $(cid).innerHTML = QUICK_TAGS.map((t) => `<button type="button" class="btn sm" data-tag="${esc(t)}">+ ${esc(t)}</button>`).join("");
+      $(cid).addEventListener("click", (e) => {
+        const b = e.target.closest("[data-tag]");
+        if (!b) return;
+        const ta = $(taId);
+        const tag = b.dataset.tag;
+        ta.value = ta.value.trim() ? (ta.value.includes(tag) ? ta.value : `${ta.value.trim()} · ${tag}`) : tag;
+        ta.focus();
+      });
+    }
+
+    $("pause-btn").onclick = () => {
+      state.paused = !state.paused;
+      $("pause-btn").textContent = state.paused ? "继续" : "暂停";
+      $("pulse-dot").className = state.paused ? "pulse-dot paused" : "pulse-dot";
+      if (!state.paused) tick(true);
+    };
+    $("refresh-btn").onclick = () => tick(true);
+
+    // GPU rack collapse
+    if (loadJson(STORE.gpuCollapsed, false)) {
+      $("gpu-grid").classList.add("collapsed");
+      $("gpu-toggle").textContent = "展开";
+    }
+    $("gpu-toggle").onclick = () => {
+      const c = $("gpu-grid").classList.toggle("collapsed");
+      $("gpu-toggle").textContent = c ? "展开" : "收起";
+      saveJson(STORE.gpuCollapsed, c);
+    };
+    $("gpu-grid").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-open-path]");
+      if (btn) openDrawer("", btn.dataset.openPath, btn.dataset.openLog);
+    });
+
+    // Toolbar segmented controls
+    document.querySelectorAll("[data-scope]").forEach((b) => {
+      b.onclick = () => {
+        state.scope = b.dataset.scope;
+        document.querySelectorAll("[data-scope]").forEach((x) => x.classList.toggle("active", x === b));
+        paintTable();
+      };
+    });
+    $("cat-cluster").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-cat]");
+      if (!b) return;
+      state.cat = b.dataset.cat;
+      $("cat-cluster").querySelectorAll("[data-cat]").forEach((x) => x.classList.toggle("active", x === b));
+      paintTable();
+    });
+    document.querySelectorAll("[data-mode]").forEach((b) => {
+      b.onclick = () => {
+        state.mode = b.dataset.mode;
+        document.querySelectorAll("[data-mode]").forEach((x) => x.classList.toggle("active", x === b));
+        paintTable();
+      };
+    });
+    $("switch-detail-btn").onclick = () => {
+      state.mode = "detail";
+      document.querySelectorAll("[data-mode]").forEach((x) => x.classList.toggle("active", x.dataset.mode === "detail"));
+      paintTable();
+    };
+
+    $("only-tested-btn").onclick = (e) => {
+      state.onlyTested = !state.onlyTested;
+      e.currentTarget.classList.toggle("active", state.onlyTested);
+      paintTable();
+    };
+    $("hide-short-btn").onclick = (e) => {
+      state.hideShort = !state.hideShort;
+      e.currentTarget.classList.toggle("active", state.hideShort);
+      paintTable();
+    };
+    $("only-pinned-btn").onclick = (e) => {
+      state.onlyPinned = !state.onlyPinned;
+      e.currentTarget.classList.toggle("active", state.onlyPinned);
+      paintTable();
+    };
+    $("pick-top-btn").onclick = () => {
+      state.selected.clear();
+      for (const r of sortRuns(filteredRuns()).slice(0, 5)) state.selected.add(r.key);
+      paintTable();
+      refreshCompare();
+    };
+    $("cmp-clear-btn").onclick = () => {
+      state.selected.clear();
+      state.hiddenCurves.clear();
+      paintTable();
+      refreshCompare();
+    };
+    $("search-input").oninput = (e) => { state.query = e.target.value; paintTable(); };
+    $("export-md-btn").onclick = exportMarkdown;
+    $("notify-btn").onclick = async (e) => {
+      const btn = e.currentTarget;
+      if (!("Notification" in window)) { toast("当前浏览器不支持桌面通知"); return; }
+      if (!state.notifyOn) {
+        const perm = await Notification.requestPermission();
+        if (perm !== "granted") { toast("通知权限未授予"); return; }
+        state.notifyOn = true;
+        btn.classList.add("active");
+        toast("已开启：运行中实验结束时将桌面提醒");
+      } else {
+        state.notifyOn = false;
+        btn.classList.remove("active");
+        toast("已关闭结束提醒");
+      }
+    };
+
+    // Compare controls
+    $("cmp-metric").onchange = (e) => { state.cmpMetric = e.target.value; refreshCompare(); };
+    document.querySelectorAll("[data-ymode]").forEach((b) => {
+      b.onclick = () => {
+        state.cmpYMode = b.dataset.ymode;
+        document.querySelectorAll("[data-ymode]").forEach((x) => x.classList.toggle("active", x === b));
+        refreshCompare();
+      };
+    });
+    document.querySelectorAll("[data-xstart]").forEach((b) => {
+      b.onclick = () => {
+        state.cmpXStart = b.dataset.xstart;
+        document.querySelectorAll("[data-xstart]").forEach((x) => x.classList.toggle("active", x === b));
+        refreshCompare();
+      };
+    });
+    document.querySelectorAll("[data-smooth]").forEach((b) => {
+      b.onclick = () => {
+        state.cmpSmooth = Number(b.dataset.smooth) || 1;
+        document.querySelectorAll("[data-smooth]").forEach((x) => x.classList.toggle("active", x === b));
+        refreshCompare();
+      };
+    });
+
+    // Table interactions
+    $("jobs-head").addEventListener("click", (e) => {
+      const th = e.target.closest("[data-sort]");
+      if (!th) return;
+      const k = th.dataset.sort;
+      if (state.sortKey === k) state.sortDir *= -1;
+      else { state.sortKey = k; state.sortDir = -1; }
+      paintTable();
+    });
+    $("jobs-body").addEventListener("click", (e) => {
+      const openBtn = e.target.closest("[data-open-key]");
+      if (openBtn) { openDrawerByRun(runByKey(openBtn.dataset.openKey)); return; }
+      const pinBtn = e.target.closest("[data-pin-key]");
+      if (pinBtn) {
+        const k = pinBtn.dataset.pinKey;
+        if (state.pins.has(k)) state.pins.delete(k); else state.pins.add(k);
+        saveJson(STORE.pins, [...state.pins]);
+        paintTable();
+        return;
+      }
+      const noteBtn = e.target.closest("[data-note-key]");
+      if (noteBtn) { openNoteModal(noteBtn.dataset.noteKey); return; }
+      const testBtn = e.target.closest("[data-test-key]");
+      if (testBtn) { openTestModal(testBtn.dataset.testKey); return; }
+    });
+    $("jobs-body").addEventListener("change", (e) => {
+      const cb = e.target.closest("[data-cmp-key]");
+      if (!cb) return;
+      const k = cb.dataset.cmpKey;
+      if (cb.checked) state.selected.add(k); else state.selected.delete(k);
+      refreshCompare();
+    });
+
+    // Drawer interactions
+    $("drawer-backdrop").onclick = closeDrawer;
+    $("dr-close").onclick = closeDrawer;
+    $("dr-copy-path").onclick = () => {
+      const txt = $("dr-path").textContent;
+      navigator.clipboard?.writeText(txt).then(() => toast("已复制路径"));
+    };
+    $("dr-note-save").onclick = () => {
+      if (state.drawerKey) persistNote(state.drawerKey, $("dr-note-ta").value).catch(() => toast("保存备注失败"));
+    };
+    $("dr-edit-test").onclick = () => { if (state.drawerKey) openTestModal(state.drawerKey); };
+    $("dr-focus-chk").onchange = () => { if (state.drawerData) paintDrawerCharts(state.drawerData); };
+    $("dr-log-refresh").onclick = () => loadDrawerLog($("dr-log-select").value || "");
+    $("dr-log-more").onclick = () => {
+      state.drawerLogLines = state.drawerLogLines === 120 ? 300 : 120;
+      $("dr-log-more").textContent = state.drawerLogLines === 120 ? "300 行" : "120 行";
+      loadDrawerLog($("dr-log-select").value || "");
+    };
+    $("dr-log-select").onchange = (e) => loadDrawerLog(e.target.value);
+    $("dr-img-grid").addEventListener("click", (e) => {
+      const th = e.target.closest("[data-zoom]");
+      if (!th) return;
+      $("img-modal-src").src = th.dataset.zoom;
+      $("img-modal").classList.add("open");
+    });
+
+    // Modals
+    document.querySelectorAll("[data-close]").forEach((b) => {
+      b.onclick = () => $(b.dataset.close).classList.remove("open");
+    });
+    ["note-modal", "test-modal", "img-modal"].forEach((id) => {
+      $(id).addEventListener("click", (e) => { if (e.target === $(id)) $(id).classList.remove("open"); });
+    });
+    $("nm-save").onclick = async () => {
+      try {
+        await persistNote(state.noteTargetKey, $("nm-ta").value);
+        $("note-modal").classList.remove("open");
+        if (state.drawerKey === state.noteTargetKey) $("dr-note-ta").value = $("nm-ta").value;
+      } catch { toast("保存备注失败"); }
+    };
+    $("tm-add-row").onclick = () => addTestEditorRow("", "");
+    $("tm-save").onclick = () => saveTestModal(false);
+    $("tm-clear").onclick = () => saveTestModal(true);
+
+    // Keyboard shortcuts
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "/" && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "")) {
+        e.preventDefault();
+        $("search-input").focus();
+      } else if (e.key === "Escape") {
+        $("img-modal").classList.remove("open");
+        $("note-modal").classList.remove("open");
+        $("test-modal").classList.remove("open");
+        closeDrawer();
+      }
+    });
+  }
+
+  bindEvents();
+  tick(true);
+  setInterval(() => tick(false), 3000);
+})();
+</script>
+</body>
+</html>

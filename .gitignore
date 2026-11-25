@@ -1,0 +1,17 @@
+# Runtime state & logs (local to each server)
+board.log
+board.pid
+notes.json
+test_results.json
+*.json.tmp
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# OS & editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

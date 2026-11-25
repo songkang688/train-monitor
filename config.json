@@ -1,0 +1,19 @@
+{
+  "_comment": "通用训练监控台配置。即使 roots 留空，也会自动扫描本机所有 NVIDIA 显卡与当前用户正在运行的 GPU/训练进程并解析控制台指标。",
+  "roots": [],
+  "log_dirs": [],
+  "script_needles": [
+    "train",
+    "finetune",
+    "pretrain",
+    "run_",
+    "torchrun",
+    "accelerate",
+    "deepspeed",
+    "yolo"
+  ],
+  "max_scan_depth": 4,
+  "max_age_days": 30,
+  "host": "127.0.0.1",
+  "port": 8788
+}
