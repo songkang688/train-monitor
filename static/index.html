@@ -1205,6 +1205,140 @@
   }
 
   /* Toast */
+  .user-strip {
+    margin: 0 0 14px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    padding: 10px 15px 12px;
+  }
+  .user-strip.has-other-online {
+    border-color: #e5a93c;
+    background: linear-gradient(180deg, #fffdf7 0%, var(--paper) 100%);
+  }
+  .user-strip-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .user-strip-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .user-count-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: var(--bg);
+    color: var(--ink-soft);
+    font-size: 12px;
+    font-weight: 700;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+  }
+  .user-other-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
+    color: #92400e;
+    font-size: 12.5px;
+    font-weight: 800;
+  }
+  .user-strip-actions { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .user-alert-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 0 0 9px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: #fff7ed;
+    border: 1.5px solid #f97316;
+    color: #9a3412;
+    font-size: 13.5px;
+    font-weight: 700;
+  }
+  .user-alert-banner[hidden] { display: none; }
+  .user-pills { display: flex; flex-wrap: wrap; gap: 7px 8px; align-items: center; }
+  .user-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    font-size: 13px;
+    color: var(--ink-soft);
+    line-height: 1.25;
+  }
+  .user-pill.is-online-other {
+    background: #fffbeb;
+    border-color: #f59e0b;
+    color: #78350f;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.14);
+  }
+  .user-pill.is-online-me {
+    background: var(--teal-soft);
+    border-color: rgba(13, 107, 101, 0.35);
+    color: var(--ink);
+  }
+  .user-pill.is-never { opacity: 0.68; }
+  .u-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: #b8c6ce; }
+  .u-dot.on-me { background: var(--teal); }
+  .u-dot.on-other { background: #ea580c; box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.24); }
+  .u-name { font-weight: 700; color: var(--ink); }
+  .user-pill.is-online-other .u-name { color: #9a3412; }
+  .u-meta { font-size: 12px; color: var(--muted); font-family: "JetBrains Mono", ui-monospace, monospace; }
+  .user-pill.is-online-other .u-meta { color: #b45309; font-weight: 600; }
+  .u-gpu {
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: #ffedd5;
+    color: #9a3412;
+    font-size: 11.5px;
+    font-weight: 700;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+  }
+  .u-gpu.me { background: rgba(13, 107, 101, 0.12); color: var(--teal); }
+  .u-cpu {
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: #e0e7ff;
+    color: #3730a3;
+    font-size: 11.5px;
+    font-weight: 700;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+  }
+  .user-events-bar {
+    margin-top: 7px;
+    padding-top: 6px;
+    border-top: 1px dashed var(--line);
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    align-items: center;
+  }
+  .user-events-bar[hidden] { display: none; }
+  .user-event-chip { display: inline-flex; align-items: center; gap: 4px; color: #9a3412; font-weight: 600; }
+
   #toast {
     position: fixed;
     bottom: 22px;
@@ -1272,6 +1406,27 @@
       <span class="kpi-label">异常 / 报错告警</span>
       <div class="kpi-val"><span id="kpi-alert" class="kpi-good">0</span><span class="kpi-sub" id="kpi-alert-sub">运行状态平稳</span></div>
     </div>
+  </section>
+
+  <!-- Server Users Presence -->
+  <section class="user-strip" id="user-strip" aria-label="服务器用户在线状态">
+    <div class="user-strip-head">
+      <div class="user-strip-title">
+        <span>👥 服务器用户</span>
+        <span class="user-count-badge" id="user-count-badge">读取中…</span>
+        <span class="user-other-badge" id="user-other-badge" hidden></span>
+      </div>
+      <div class="user-strip-actions">
+        <button class="btn sm primary" id="user-alert-toggle" type="button" title="其他用户一上线或调用命令立即提醒">🔔 上线提醒：开</button>
+        <button class="btn sm" id="user-desktop-notify" type="button" hidden title="开启浏览器桌面通知，切到其他标签页也能收到他人上线弹窗">开启桌面弹窗</button>
+      </div>
+    </div>
+    <div class="user-alert-banner" id="user-online-alert" hidden>
+      <span id="user-online-alert-text"></span>
+      <button class="btn sm" id="user-online-alert-close" type="button">知道了</button>
+    </div>
+    <div class="user-pills" id="user-pills"></div>
+    <div class="user-events-bar" id="user-events-bar" hidden></div>
   </section>
 
   <!-- GPU Rack -->
@@ -1579,6 +1734,8 @@
     drawerLogLines: 120,
     notifyOn: false,
     prevRunning: new Set(),
+    userAlertOn: loadJson("utb_user_alert_v1", true),
+    prevOnlineUsers: null,
     noteTargetKey: "",
     testTargetKey: "",
   };
@@ -1912,8 +2069,156 @@
     $("kpi-alert").className = alerts.length ? "kpi-bad" : "kpi-good";
     $("kpi-alert-sub").textContent = alerts.length ? `${alerts[0].name} 存在异常` : "运行状态平稳";
 
+    paintUsers(d.users || [], d.user_events || [], d.now);
     paintGpuRack(gpus);
     paintCategories(d.categories || []);
+  }
+
+  function playOnlineChime() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      [660, 880].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.08, ctx.currentTime + i * 0.14);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.14 + 0.22);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + i * 0.14);
+        osc.stop(ctx.currentTime + i * 0.14 + 0.24);
+      });
+      setTimeout(() => ctx.close().catch(() => {}), 600);
+    } catch {}
+  }
+
+  function syncUserAlertUi() {
+    const btn = $("user-alert-toggle");
+    if (btn) {
+      btn.classList.toggle("primary", Boolean(state.userAlertOn));
+      btn.textContent = state.userAlertOn ? "🔔 上线提醒：开" : "🔕 上线提醒：关";
+    }
+    const desk = $("user-desktop-notify");
+    if (desk) {
+      const canAsk = "Notification" in window && Notification.permission === "default";
+      desk.hidden = !state.userAlertOn || !canAsk;
+    }
+  }
+
+  function fmtUserAgo(sec) {
+    if (sec == null || sec < 0) return "";
+    if (sec < 60) return "刚刚";
+    if (sec < 3600) return `${Math.floor(sec / 60)}分前`;
+    if (sec < 86400) return `${Math.floor(sec / 3600)}小时前`;
+    return `${Math.floor(sec / 86400)}天前`;
+  }
+
+  function paintUsers(users, events, serverNow) {
+    const strip = $("user-strip");
+    if (!strip) return;
+    syncUserAlertUi();
+    if (!users.length) {
+      $("user-count-badge").textContent = "暂无用户数据";
+      $("user-pills").innerHTML = "";
+      return;
+    }
+    const onlineList = users.filter((u) => u.online);
+    const otherOnline = onlineList.filter((u) => !u.is_me);
+    $("user-count-badge").textContent = `在线 ${onlineList.length} / 共 ${users.length} 人`;
+    strip.classList.toggle("has-other-online", otherOnline.length > 0);
+    const ob = $("user-other-badge");
+    if (otherOnline.length) {
+      ob.hidden = false;
+      ob.textContent = `⚠️ 他人在线：${otherOnline.map((u) => u.user).join("、")}`;
+    } else {
+      ob.hidden = true;
+      ob.textContent = "";
+    }
+
+    const curSet = new Set(otherOnline.map((u) => u.user));
+    if (state.prevOnlineUsers !== null && state.userAlertOn) {
+      const newly = otherOnline.filter((u) => !state.prevOnlineUsers.has(u.user));
+      if (newly.length) {
+        const nowStr = new Date().toLocaleTimeString("zh-CN", { hour12: false });
+        const msg = `🔔 用户上线/调用提醒：${newly.map((u) => `${u.user}${u.via ? `（${u.via}）` : ""}`).join("、")} 刚刚活跃（${nowStr}）`;
+        $("user-online-alert-text").textContent = msg;
+        $("user-online-alert").hidden = false;
+        toast(msg);
+        playOnlineChime();
+        try {
+          if ("Notification" in window && Notification.permission === "granted") {
+            new Notification("服务器用户上线提醒", { body: `${newly.map((u) => u.user).join("、")} 刚刚登录或调用服务器（${nowStr}）` });
+          }
+        } catch {}
+      }
+    }
+    state.prevOnlineUsers = curSet;
+
+    const now = serverNow || Date.now() / 1000;
+    const pad = (n) => String(n).padStart(2, "0");
+    const fmtMdHm = (ts) => {
+      if (ts == null) return "";
+      const d = new Date(ts * 1000);
+      return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+    const fmtHm = (ts) => {
+      if (ts == null) return "";
+      const d = new Date(ts * 1000);
+      return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+
+    $("user-pills").innerHTML = users.map((u) => {
+      const cls = u.online ? (u.is_me ? "is-online-me" : "is-online-other") : (u.last_login == null ? "is-never" : "");
+      const dotCls = u.online ? (u.is_me ? "on-me" : "on-other") : "";
+      const connStr = fmtHm(u.connected_since);
+      const lastStr = fmtMdHm(u.last_login);
+      let statusTxt = "";
+      if (u.online) {
+        const sessTag = u.sessions > 1 ? `×${u.sessions}` : "";
+        const viaTag = u.via ? ` · ${u.via}` : "";
+        statusTxt = `在线${sessTag}${viaTag}${connStr ? ` · ${connStr}` : ""}`;
+      } else if (u.last_login != null) {
+        const ago = fmtUserAgo(Math.max(0, now - u.last_login));
+        const bgTag = u.bg_procs > 0 ? ` · 后台${u.bg_procs}进程` : "";
+        statusTxt = `最近活跃 ${lastStr} (${ago})${bgTag}`;
+      } else {
+        statusTxt = "无登录记录";
+      }
+      const gpuHtml = u.gpu_indices && u.gpu_indices.length
+        ? `<span class="u-gpu${u.is_me ? " me" : ""}">卡 #${u.gpu_indices.join(",#")}${u.gpu_mem_gb ? ` ${u.gpu_mem_gb}G` : ""}</span>`
+        : "";
+      const cpuHtml = !u.is_me && u.cpu_pct >= 20
+        ? `<span class="u-cpu" title="当前后台活跃 CPU 占用合计 ${u.cpu_pct}%">CPU ${u.cpu_pct}%</span>`
+        : "";
+      const tipParts = [
+        `${u.user}${u.is_me ? "（当前账号）" : ""}`,
+        u.online ? `状态：在线 / 刚调用（${u.via || "SSH"}）` : `状态：离线${u.bg_procs > 0 ? `（后台运行 ${u.bg_procs} 个进程${u.cpu_pct ? `，CPU ${u.cpu_pct}%` : ""}）` : ""}`,
+        lastStr ? `最近活跃：${lastStr}${u.last_source ? `（来源：${u.last_source}）` : ""}${u.from_host ? ` · ${u.from_host}` : ""}` : "最近活跃：无记录",
+        u.gpu_indices && u.gpu_indices.length ? `占用显卡：#${u.gpu_indices.join(", #")}（${u.gpu_mem_gb} GB）` : "占用显卡：无",
+      ];
+      return `<div class="user-pill ${cls}" title="${esc(tipParts.join("\n"))}">
+        <span class="u-dot ${dotCls}"></span>
+        <span class="u-name">${esc(u.user)}${u.is_me ? ' <small style="color:var(--teal);font-weight:700">(我)</small>' : ""}</span>
+        <span class="u-meta">${esc(statusTxt)}</span>
+        ${gpuHtml}${cpuHtml}
+      </div>`;
+    }).join("");
+
+    const evBar = $("user-events-bar");
+    if (evBar) {
+      if (events && events.length) {
+        evBar.hidden = false;
+        evBar.innerHTML = `<span style="font-weight:700;color:var(--ink-soft)">最近上线/调用动态：</span>` + events.slice(0, 5).map((ev) =>
+          `<span class="user-event-chip">🔔 ${esc(fmtHm(ev.ts))} ${esc(ev.user)}（${esc(ev.via || "登录/调用")}）</span>`
+        ).join("");
+      } else {
+        evBar.hidden = true;
+        evBar.innerHTML = "";
+      }
+    }
   }
 
   function shortGpuName(name) {
@@ -3276,6 +3581,22 @@
       $("img-modal-src").src = th.dataset.zoom;
       $("img-modal").classList.add("open");
     });
+
+    $("user-alert-toggle").onclick = () => {
+      state.userAlertOn = !state.userAlertOn;
+      saveJson("utb_user_alert_v1", state.userAlertOn);
+      syncUserAlertUi();
+      toast(state.userAlertOn ? "已开启他人上线/调用提醒" : "已关闭他人上线/调用提醒");
+    };
+    $("user-desktop-notify").onclick = async () => {
+      try {
+        if (!("Notification" in window)) { toast("当前浏览器不支持桌面弹窗"); return; }
+        const perm = await Notification.requestPermission();
+        syncUserAlertUi();
+        toast(perm === "granted" ? "已开启桌面弹窗：他人一上线立即通知 ✓" : "浏览器未授予通知权限");
+      } catch {}
+    };
+    $("user-online-alert-close").onclick = () => { $("user-online-alert").hidden = true; };
 
     // Modals
     document.querySelectorAll("[data-close]").forEach((b) => {

@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import csv
+import email.utils
 import json
 import os
 import pwd
@@ -1214,7 +1215,384 @@ def snapshot() -> dict:
         "categories": [{"id": c, "label": CATEGORY_ZH.get(c, c)} for c in categories],
         "test_sets": test_sets,
         "gpus": cards,
+        "users": _server_users(cards, now),
+        "user_events": list(_USER_EVENTS[:8]),
     }
+
+
+_LASTLOG_CACHE: tuple[float, dict[str, tuple[float | None, str]]] = (0.0, {})
+_WTMP_CACHE: tuple[float, dict[str, tuple[float, str]]] = (0.0, {})
+USER_SEEN_PATH = _HERE / "user_seen.json"
+_USER_SEEN_LOCK = threading.Lock()
+_USER_SEEN_MEM: dict[str, dict] = {}
+_USER_SEEN_LAST_SAVE: float = 0.0
+_PREV_USER_ONLINE: set[str] | None = None
+_PREV_USER_GPUS: dict[str, set[int]] = {}
+_USER_EVENTS: list[dict] = []
+
+
+def _load_user_seen() -> dict[str, dict]:
+    global _USER_SEEN_MEM
+    if _USER_SEEN_MEM:
+        return _USER_SEEN_MEM
+    if USER_SEEN_PATH.is_file():
+        try:
+            raw = json.loads(USER_SEEN_PATH.read_text(encoding="utf-8"))
+            if isinstance(raw, dict):
+                out: dict[str, dict] = {}
+                for k, v in raw.items():
+                    if isinstance(v, (int, float)):
+                        out[str(k)] = {"ts": float(v), "via": "历史在线记录"}
+                    elif isinstance(v, dict) and isinstance(v.get("ts"), (int, float)):
+                        out[str(k)] = {"ts": float(v["ts"]), "via": str(v.get("via") or "历史在线记录")}
+                _USER_SEEN_MEM = out
+        except (OSError, ValueError):
+            pass
+    return _USER_SEEN_MEM
+
+
+def _record_user_seen(active_map: dict[str, str], now: float) -> dict[str, dict]:
+    global _USER_SEEN_LAST_SAVE
+    with _USER_SEEN_LOCK:
+        seen = _load_user_seen()
+        changed = False
+        force_save = False
+        for u, via in active_map.items():
+            prev = seen.get(u)
+            if prev is None:
+                seen[u] = {"ts": now, "via": via}
+                changed = True
+                force_save = True
+            elif now - prev["ts"] >= 20.0 or (via and prev.get("via") != via):
+                seen[u] = {"ts": now, "via": via or prev.get("via") or ""}
+                changed = True
+        if changed and (force_save or now - _USER_SEEN_LAST_SAVE >= 20.0):
+            try:
+                tmp = USER_SEEN_PATH.with_suffix(".tmp")
+                tmp.write_text(json.dumps(seen, ensure_ascii=False, indent=2), encoding="utf-8")
+                tmp.replace(USER_SEEN_PATH)
+                _USER_SEEN_LAST_SAVE = now
+            except OSError:
+                pass
+        return {k: dict(v) for k, v in seen.items()}
+
+
+def _parse_w_idle_sec(token: str) -> float | None:
+    t = (token or "").strip()
+    if not t or t == "?":
+        return None
+    if t.endswith("s"):
+        try:
+            return float(t[:-1])
+        except ValueError:
+            return None
+    if t.endswith("days"):
+        try:
+            return float(t[:-4]) * 86400.0
+        except ValueError:
+            return None
+    if t.endswith("m") and ":" in t:
+        p = t[:-1].split(":")
+        if len(p) == 2 and p[0].isdigit() and p[1].isdigit():
+            return int(p[0]) * 3600.0 + int(p[1]) * 60.0
+        return None
+    if ":" in t:
+        p = t.split(":")
+        if len(p) == 2 and p[0].isdigit() and p[1].isdigit():
+            return int(p[0]) * 60.0 + int(p[1])
+    return None
+
+
+def _parse_wtmp(now: float) -> dict[str, tuple[float, str]]:
+    global _WTMP_CACHE
+    cached_at, cached_map = _WTMP_CACHE
+    if now - cached_at < 30.0 and cached_map:
+        return cached_map
+    result: dict[str, tuple[float, str]] = {}
+    try:
+        out = subprocess.check_output(["last", "-F", "-w", "-n", "300"], text=True, timeout=4, stderr=subprocess.DEVNULL)
+    except (OSError, subprocess.SubprocessError):
+        return cached_map
+    for line in out.splitlines():
+        if not line.strip() or line.startswith(("wtmp ", "reboot ", "shutdown ")):
+            continue
+        parts = line.split()
+        if len(parts) < 8:
+            continue
+        user = parts[0]
+        if user in result:
+            continue
+        for idx in range(2, min(6, len(parts) - 4)):
+            cand = " ".join(parts[idx:idx + 5])
+            try:
+                tm = time.strptime(cand, "%a %b %d %H:%M:%S %Y")
+                result[user] = (time.mktime(tm), parts[2] if idx >= 3 else "")
+                break
+            except ValueError:
+                continue
+    _WTMP_CACHE = (now, result)
+    return result
+
+
+def _parse_lastlog(now: float) -> dict[str, tuple[float | None, str]]:
+    global _LASTLOG_CACHE
+    cached_at, cached_map = _LASTLOG_CACHE
+    if now - cached_at < 30.0 and cached_map:
+        return cached_map
+    result: dict[str, tuple[float | None, str]] = {}
+    try:
+        out = subprocess.check_output(["lastlog"], text=True, timeout=4, stderr=subprocess.DEVNULL)
+    except (OSError, subprocess.SubprocessError):
+        return cached_map
+    for line in out.splitlines()[1:]:
+        line = line.rstrip()
+        if not line or "Never logged in" in line or "**从未登录过**" in line:
+            continue
+        parts = line.split()
+        if len(parts) < 6:
+            continue
+        user = parts[0]
+        ts_val: float | None = None
+        from_host = ""
+        for idx in (3, 2):
+            if len(parts) <= idx + 4:
+                continue
+            cand = " ".join(parts[idx:])
+            try:
+                dt = email.utils.parsedate_to_datetime(cand)
+                ts_val = dt.timestamp()
+                if idx == 3:
+                    from_host = parts[2]
+                break
+            except (TypeError, ValueError):
+                continue
+        if ts_val is not None:
+            result[user] = (ts_val, from_host)
+    _LASTLOG_CACHE = (now, result)
+    return result
+
+
+def _server_users(gpus: list[dict], now: float) -> list[dict]:
+    """全渠道统计本机真实用户的在线/调用状态、多源合并最近活跃时间、后台进程与占卡情况。"""
+    global _PREV_USER_ONLINE
+    my_user = _my_username()
+    human_users: set[str] = set()
+    try:
+        for ent in pwd.getpwall():
+            if 1000 <= ent.pw_uid < 65534:
+                shell = ent.pw_shell or ""
+                if shell.endswith("nologin") or shell.endswith("/false"):
+                    continue
+                human_users.add(ent.pw_name)
+    except OSError:
+        pass
+    if my_user:
+        human_users.add(my_user)
+
+    live_signals: dict[str, dict] = {}
+    proc_info: dict[str, dict] = {}
+    ide_active_re = re.compile(
+        r"extensionHost|ptyHost|server-main\.js|bootstrap-fork|code-server|jupyter-lab|jupyter-notebook|tensorboard|streamlit|sftp-server|rsync|scp\b",
+        re.I,
+    )
+    ignore_bg_comm = {"systemd", "(sd-pam)", "dbus-daemon"}
+    try:
+        out = subprocess.check_output(
+            ["ps", "-eo", "user:32,pcpu,etimes,comm,args", "--no-headers"],
+            text=True,
+            timeout=4,
+            stderr=subprocess.DEVNULL,
+        )
+        for line in out.splitlines():
+            parts = line.strip().split(None, 4)
+            if len(parts) < 4:
+                continue
+            u, cpu_s, et_s, comm = parts[0], parts[1], parts[2], parts[3]
+            args = parts[4] if len(parts) > 4 else comm
+            if u == "root":
+                continue
+            try:
+                pcpu = float(cpu_s)
+            except ValueError:
+                pcpu = 0.0
+            try:
+                et = max(0, int(et_s))
+            except ValueError:
+                et = 0
+            if u not in human_users and comm != "sshd":
+                continue
+            human_users.add(u)
+            p = proc_info.setdefault(u, {"count": 0, "min_etimes": et, "cpu_sum": 0.0, "newest_comm": comm})
+            if comm not in ignore_bg_comm:
+                p["count"] += 1
+            p["cpu_sum"] += pcpu
+            if et < p["min_etimes"]:
+                p["min_etimes"] = et
+                p["newest_comm"] = comm
+
+            def _mark_live(reason: str, etimes_val: int, is_sess: bool = False) -> None:
+                info = live_signals.setdefault(u, {"sessions": 0, "min_etimes": etimes_val, "reasons": []})
+                if is_sess:
+                    info["sessions"] += 1
+                if etimes_val < info["min_etimes"]:
+                    info["min_etimes"] = etimes_val
+                if reason and reason not in info["reasons"]:
+                    info["reasons"].append(reason)
+
+            if comm == "sshd":
+                _mark_live("SSH终端" if "@pts/" in args else "SSH/IDE", et, is_sess=True)
+            elif ide_active_re.search(args) and "agent host" not in args:
+                tag = "Jupyter/Web" if re.search(r"jupyter|tensorboard|streamlit", args, re.I) else (
+                    "文件传输" if re.search(r"sftp-server|rsync|scp\b", args, re.I) else "IDE远程"
+                )
+                _mark_live(tag, et, is_sess=True)
+            elif et <= 300 and comm not in ignore_bg_comm:
+                _mark_live(f"调用:{comm}", et, is_sess=False)
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+    try:
+        out = subprocess.check_output(["who"], text=True, timeout=3, stderr=subprocess.DEVNULL)
+        for line in out.splitlines():
+            parts = line.split()
+            if not parts:
+                continue
+            u = parts[0]
+            if u == "root" or "tmux(" in line or ":pts/" in line or "SCREEN" in line:
+                continue
+            human_users.add(u)
+            info = live_signals.setdefault(u, {"sessions": 0, "min_etimes": 0, "reasons": []})
+            info["sessions"] = max(info["sessions"], 1)
+            if "直连终端" not in info["reasons"]:
+                info["reasons"].append("直连终端")
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+    try:
+        out = subprocess.check_output(["w", "-h", "-s"], text=True, timeout=3, stderr=subprocess.DEVNULL)
+        for line in out.splitlines():
+            parts = line.split()
+            if len(parts) < 4:
+                continue
+            raw_u, idle_tok = parts[0], parts[3]
+            idle_sec = _parse_w_idle_sec(idle_tok)
+            if idle_sec is None or idle_sec > 600.0:
+                continue
+            matched_u = raw_u if raw_u in human_users else next((hu for hu in human_users if hu.startswith(raw_u)), "")
+            if not matched_u:
+                continue
+            info = live_signals.setdefault(matched_u, {"sessions": 0, "min_etimes": int(idle_sec), "reasons": []})
+            if int(idle_sec) < info["min_etimes"]:
+                info["min_etimes"] = int(idle_sec)
+            if "终端活跃" not in info["reasons"]:
+                info["reasons"].append("终端活跃")
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+    gpu_by_user: dict[str, dict] = {}
+    for card in gpus:
+        idx = card.get("index")
+        my_mem = sum(int(jd.get("mem_mb") or 0) for jd in (card.get("job_details") or []))
+        if my_user and my_mem > 0:
+            entry = gpu_by_user.setdefault(my_user, {"indices": [], "mem_mb": 0})
+            if idx not in entry["indices"]:
+                entry["indices"].append(idx)
+            entry["mem_mb"] += my_mem
+        for ou in card.get("other_users") or []:
+            u = ou.get("user")
+            if not u:
+                continue
+            human_users.add(u)
+            entry = gpu_by_user.setdefault(u, {"indices": [], "mem_mb": 0})
+            if idx not in entry["indices"]:
+                entry["indices"].append(idx)
+            entry["mem_mb"] += int(ou.get("mem_mb") or 0)
+
+    for u, ginfo in gpu_by_user.items():
+        cur_set = set(ginfo["indices"])
+        prev_set = _PREV_USER_GPUS.get(u)
+        if prev_set is not None and (cur_set - prev_set):
+            info = live_signals.setdefault(u, {"sessions": 0, "min_etimes": 0, "reasons": []})
+            info["min_etimes"] = 0
+            tag = f"新占卡#{','.join(str(i) for i in sorted(cur_set - prev_set))}"
+            if tag not in info["reasons"]:
+                info["reasons"].append(tag)
+        _PREV_USER_GPUS[u] = cur_set
+    for u in list(_PREV_USER_GPUS.keys()):
+        if u not in gpu_by_user:
+            _PREV_USER_GPUS[u] = set()
+
+    active_via_map = {u: " / ".join(info["reasons"][:2]) for u, info in live_signals.items()}
+    seen_map = _record_user_seen(active_via_map, now)
+
+    cur_online_others = {u for u in live_signals if u != my_user}
+    if _PREV_USER_ONLINE is not None:
+        for u in sorted(cur_online_others - _PREV_USER_ONLINE):
+            _USER_EVENTS.insert(0, {"user": u, "ts": now, "via": active_via_map.get(u) or "登录/调用"})
+        del _USER_EVENTS[15:]
+    _PREV_USER_ONLINE = cur_online_others
+
+    lastlog_map = _parse_lastlog(now)
+    wtmp_map = _parse_wtmp(now)
+    users_out: list[dict] = []
+    for u in sorted(human_users):
+        live = live_signals.get(u)
+        online = live is not None
+        connected_since = (now - live["min_etimes"]) if live is not None else None
+        ll_ts, ll_from = lastlog_map.get(u, (None, ""))
+        wt_ts, wt_from = wtmp_map.get(u, (None, ""))
+        pinfo = proc_info.get(u)
+        proc_ts = (now - pinfo["min_etimes"]) if pinfo is not None else None
+        seen_entry = seen_map.get(u)
+        seen_ts = seen_entry["ts"] if seen_entry else None
+        via_str = " / ".join(live["reasons"][:2]) if live else ""
+
+        cands: list[tuple[float, str]] = []
+        if connected_since is not None:
+            cands.append((connected_since, via_str or "实时在线"))
+        if seen_ts is not None:
+            cands.append((seen_ts, (seen_entry.get("via") if seen_entry else "") or "监控台记录"))
+        if wt_ts is not None:
+            cands.append((wt_ts, "wtmp 登录/终端"))
+        if ll_ts is not None:
+            cands.append((ll_ts, "lastlog 登录"))
+        if proc_ts is not None:
+            cands.append((proc_ts, f"进程/IDE ({pinfo['newest_comm']})"))
+
+        last_login: float | None = None
+        last_source = ""
+        if cands:
+            last_login, last_source = max(cands, key=lambda x: x[0])
+
+        ginfo = gpu_by_user.get(u) or {"indices": [], "mem_mb": 0}
+        cpu_sum = round(pinfo["cpu_sum"], 0) if pinfo else 0.0
+        users_out.append({
+            "user": u,
+            "is_me": u == my_user,
+            "online": online,
+            "sessions": live["sessions"] if live else 0,
+            "via": via_str,
+            "connected_since": connected_since,
+            "last_login": last_login,
+            "last_source": last_source,
+            "bg_procs": pinfo["count"] if (pinfo and not online) else 0,
+            "cpu_pct": int(cpu_sum) if cpu_sum >= 5.0 else 0,
+            "from_host": ll_from or wt_from,
+            "gpu_indices": sorted(ginfo["indices"]),
+            "gpu_mem_gb": round(ginfo["mem_mb"] / 1024.0, 1) if ginfo["mem_mb"] > 0 else 0.0,
+        })
+
+    def _u_sort(item: dict) -> tuple:
+        if item["online"] and not item["is_me"]:
+            group = 0
+        elif item["online"] and item["is_me"]:
+            group = 1
+        else:
+            group = 2
+        return (group, -(item["last_login"] or 0.0), item["user"])
+
+    users_out.sort(key=_u_sort)
+    return users_out
 
 
 def _safe_roots(cfg: dict) -> list[Path]:
